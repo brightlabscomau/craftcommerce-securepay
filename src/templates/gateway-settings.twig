@@ -1,0 +1,318 @@
+{# @var gateway craft\securepay\gateways\Gateway #}
+
+{% import "_includes/forms" as forms %}
+
+<div class="field">
+    <div class="heading">
+        <h2>{{ 'API Credentials'|t('commerce') }}</h2>
+    </div>
+    <div class="instructions">
+        <p>{{ 'Enter your SecurePay API credentials. You can obtain these from your SecurePay merchant portal.'|t('commerce') }}</p>
+    </div>
+</div>
+
+{{ forms.textField({
+    label: 'Client ID'|t('commerce'),
+    id: 'clientId',
+    name: 'clientId',
+    value: gateway.clientId,
+    required: true,
+    instructions: 'The client ID provided by SecurePay for API authentication.'|t('commerce'),
+}) }}
+
+{{ forms.passwordField({
+    label: 'Client Secret'|t('commerce'),
+    id: 'clientSecret',
+    name: 'clientSecret',
+    value: gateway.clientSecret,
+    required: true,
+    instructions: 'The client secret provided by SecurePay for API authentication.'|t('commerce'),
+}) }}
+
+{{ forms.textField({
+    label: 'Merchant Code'|t('commerce'),
+    id: 'merchantCode',
+    name: 'merchantCode',
+    value: gateway.merchantCode,
+    required: true,
+    instructions: 'The merchant code provided by SecurePay.'|t('commerce'),
+}) }}
+
+<hr>
+
+<div class="field">
+    <div class="heading">
+        <h2>{{ 'Environment Settings'|t('commerce') }}</h2>
+    </div>
+</div>
+
+{{ forms.lightswitchField({
+    label: 'Sandbox Mode'|t('commerce'),
+    id: 'sandboxMode',
+    name: 'sandboxMode',
+    on: gateway.sandboxMode,
+    instructions: 'Whether to use the SecurePay sandbox environment for testing.'|t('commerce'),
+}) }}
+
+
+{{ forms.lightswitchField({
+    label: 'Use JavaScript SDK'|t('commerce'),
+    id: 'useJavaScriptSDK',
+    name: 'useJavaScriptSDK',
+    on: gateway.useJavaScriptSDK,
+    instructions: 'Enable the SecurePay JavaScript SDK for enhanced security and PCI compliance. Recommended for production.'|t('commerce'),
+}) }}
+
+<div id="js-sdk-styling">
+    <hr>
+    
+    <div class="field">
+        <div class="heading">
+            <h2>{{ 'JavaScript SDK Styling'|t('commerce') }}</h2>
+        </div>
+        <div class="instructions">
+            <p>{{ 'Customize the appearance of the payment form when using the JavaScript SDK.'|t('commerce') }}</p>
+        </div>
+    </div>
+    {{ forms.checkboxSelectField({
+        label: 'Allowed Card Types'|t('commerce'),
+        id: 'allowedCardTypes',
+        name: 'allowedCardTypes',
+        values: gateway.allowedCardTypes,
+        options: [
+            { label: 'Visa', value: 'visa' },
+            { label: 'Mastercard', value: 'mastercard' },
+            { label: 'American Express', value: 'amex' },
+            { label: 'Diners Club', value: 'diners' }
+        ],
+        instructions: 'Select which card types are allowed for payment processing.'|t('commerce'),
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Show Card Icons'|t('commerce'),
+        id: 'showCardIcons',
+        name: 'showCardIcons',
+        on: gateway.showCardIcons,
+        instructions: 'Display card brand icons in the payment form to help users identify supported cards.'|t('commerce'),
+    }) }}
+    
+    {{ forms.colorField({
+        label: 'Background Color'|t('commerce'),
+        id: 'backgroundColor',
+        name: 'backgroundColor',
+        value: gateway.backgroundColor,
+        instructions: 'The background color of the payment form fields.'|t('commerce'),
+    }) }}
+
+
+    {{ forms.textField({
+        label: 'Label Font Family'|t('commerce'),
+        id: 'labelFontFamily',
+        name: 'labelFontFamily',
+        value: gateway.labelFontFamily,
+        placeholder: 'Arial, Helvetica, sans-serif',
+        instructions: 'The font family for form field labels.'|t('commerce'),
+        inputAttributes: {
+            style: 'width: 300px;',
+        },
+    }) }}
+
+    {{ forms.textField({
+        label: 'Label Font Size'|t('commerce'),
+        id: 'labelFontSize',
+        name: 'labelFontSize',
+        value: gateway.labelFontSize,
+        placeholder: '1.1rem',
+        instructions: 'The font size for form field labels (e.g., 1.1rem, 16px, 14pt).'|t('commerce'),
+        inputAttributes: {
+            style: 'width: 300px;',
+        },
+    }) }}
+
+    {{ forms.colorField({
+        label: 'Label Font Color'|t('commerce'),
+        id: 'labelFontColor',
+        name: 'labelFontColor',
+        value: gateway.labelFontColor,
+        instructions: 'The color of form field labels.'|t('commerce'),
+        inputAttributes: {
+            style: 'width: 300px;',
+        },
+    }) }}
+
+    {{ forms.textField({
+    label: 'Input Font Family'|t('commerce'),
+    id: 'inputFontFamily',
+    name: 'inputFontFamily',
+    value: gateway.inputFontFamily,
+    placeholder: 'Arial, Helvetica, sans-serif',
+    instructions: 'The font family for form input fields.'|t('commerce'),
+    inputAttributes: {
+        style: 'width: 300px;',
+    },
+}) }}
+
+    {{ forms.textField({
+        label: 'Input Font Size'|t('commerce'),
+        id: 'inputFontSize',
+        name: 'inputFontSize',
+        value: gateway.inputFontSize,
+        placeholder: '1.1rem',
+        instructions: 'The font size for form input fields (e.g., 1.1rem, 16px, 14pt).'|t('commerce'),
+        inputAttributes: {
+        style: 'width: 300px;',
+    },
+    }) }}
+
+    {{ forms.colorField({
+        label: 'Input Font Color'|t('commerce'),
+        id: 'inputFontColor',
+        name: 'inputFontColor',
+        value: gateway.inputFontColor,
+        instructions: 'The color of text in form input fields.'|t('commerce'),
+        inputAttributes: {
+            style: 'width: 300px;',
+        },
+    }) }}
+
+    
+</div>
+
+<hr>
+
+<div class="field">
+    <div class="heading">
+        <h2>{{ 'Security Features'|t('commerce') }}</h2>
+    </div>
+    <div class="instructions">
+        <p>{{ 'Configure additional security features provided by SecurePay.'|t('commerce') }}</p>
+    </div>
+</div>
+
+{{ forms.lightswitchField({
+    label: '3D Secure 2.0'|t('commerce'),
+    id: 'threeDSecure',
+    name: 'threeDSecure',
+    on: gateway.threeDSecure,
+    instructions: 'Enable 3D Secure 2.0 authentication for enhanced security. Requires 3DS to be enabled on your SecurePay account.'|t('commerce'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Fraud Detection'|t('commerce'),
+    id: 'fraudDetection',
+    name: 'fraudDetection',
+    on: gateway.fraudDetection,
+    instructions: 'Enable fraud detection for transactions. Requires fraud detection to be enabled on your SecurePay account.'|t('commerce'),
+}) }}
+
+{{ forms.selectField({
+    label: 'Fraud Detection Provider'|t('commerce'),
+    id: 'fraudProvider',
+    name: 'fraudProvider',
+    value: gateway.fraudProvider,
+    options: [
+        { label: 'FraudGuard', value: 'fraudguard' },
+        { label: 'ACI ReD Shield', value: 'aci' }
+    ],
+    instructions: 'Select the fraud detection provider. FraudGuard is the default, ACI ReD Shield requires additional setup.'|t('commerce'),
+}) }}
+
+<hr>
+
+<div class="field">
+    <div class="heading">
+        <h2>{{ 'Payment Features'|t('commerce') }}</h2>
+    </div>
+    <div class="instructions">
+        <p>{{ 'Enable additional payment features offered by SecurePay.'|t('commerce') }}</p>
+    </div>
+</div>
+
+{{ forms.lightswitchField({
+    label: 'Card Payments'|t('commerce'),
+    id: 'cardPayments',
+    name: 'cardPayments',
+    on: gateway.cardPayments,
+    instructions: 'Enable credit and debit card payments. This is the standard payment method for most transactions.'|t('commerce'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'PayPal Payments'|t('commerce'),
+    id: 'paypalPayments',
+    name: 'paypalPayments',
+    on: gateway.paypalPayments,
+    instructions: 'Enable PayPal as a payment option through SecurePay. Requires PayPal to be configured on your SecurePay account.'|t('commerce'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Apple Pay'|t('commerce'),
+    id: 'applePay',
+    name: 'applePay',
+    on: gateway.applePay,
+    instructions: 'Enable Apple Pay payments. Requires domain verification and proper Apple Pay merchant setup.'|t('commerce'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Direct Entry Payments'|t('commerce'),
+    id: 'directEntryPayments',
+    name: 'directEntryPayments',
+    on: gateway.directEntryPayments,
+    instructions: 'Enable direct entry payments for bank transfers and direct debits. Requires direct entry to be enabled on your SecurePay account.'|t('commerce'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Dynamic Currency Conversion'|t('commerce'),
+    id: 'dynamicCurrencyConversion',
+    name: 'dynamicCurrencyConversion',
+    on: gateway.dynamicCurrencyConversion,
+    instructions: 'Enable Dynamic Currency Conversion to allow customers to pay in their local currency.'|t('commerce'),
+}) }}
+
+<hr>
+
+<div class="field">
+    <div class="heading">
+        <h2>{{ 'Webhook Information'|t('commerce') }}</h2>
+    </div>
+    <div class="instructions">
+        <p>{{ 'Configure this webhook URL in your SecurePay merchant portal for real-time transaction updates.'|t('commerce') }}</p>
+        {% if gateway.id %}
+            <p><strong>{{ 'Webhook URL:'|t('commerce') }}</strong></p>
+            <code>{{ siteUrl }}actions/commerce/webhooks/process-webhook?gateway={{ gateway.id }}</code>
+        {% else %}
+            <p><em>{{ 'Webhook URL will be available after saving the gateway.'|t('commerce') }}</em></p>
+        {% endif %}
+    </div>
+</div>
+
+<hr>
+
+<div class="field">
+    <div class="heading">
+        <h2>{{ 'Integration Information'|t('commerce') }}</h2>
+    </div>
+    <div class="instructions">
+        <p>{{ 'This gateway integrates with SecurePay API v2 following the official documentation patterns.'|t('commerce') }}</p>
+        <ul>
+            <li>{{ 'API Documentation: '|t('commerce') }}<a href="https://auspost.com.au/payments/docs/securepay/" target="_blank">SecurePay API Docs</a></li>
+            <li>{{ 'Support: '|t('commerce') }}<a href="mailto:support@securepay.com.au">support@securepay.com.au</a></li>
+            <li>{{ 'Test Cards: Visa 4111111111111111, Mastercard 5555555555554444'|t('commerce') }}</li>
+            <li>{{ 'Craft Commerce Integration: '|t('commerce') }}<a href="https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html" target="_blank">Payment Gateway Types</a></li>
+        </ul>
+    </div>
+</div> 
+
+{% js %}
+const lightswitch = document.querySelector('#types-craft-securepay-gateways-Gateway-useJavaScriptSDK.lightswitch');
+const sdkSection = document.querySelector('#types-craft-securepay-gateways-Gateway-js-sdk-styling');
+
+const observer = new MutationObserver(() => {
+    const isOn = lightswitch.classList.contains('on');
+    sdkSection.classList.toggle('hidden', !isOn);
+});
+
+const isOn = lightswitch.classList.contains('on');
+sdkSection.classList.toggle('hidden', !isOn);
+
+observer.observe(lightswitch, { attributes: true, attributeFilter: ['class'] });
+{% endjs %}
