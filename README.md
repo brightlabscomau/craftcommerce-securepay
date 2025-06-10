@@ -71,9 +71,10 @@ php craft plugin/install securepay
 | Setting | Description | Required |
 |---------|-------------|----------|
 | Sandbox Mode | Enable for testing | ✅ |
-| Use JavaScript SDK | Enable the SecurePay JavaScript SDK for enhanced security and PCI compliance | ✅ |
 
 ### JavaScript SDK Styling
+
+*The JavaScript SDK is always enabled for enhanced security and PCI compliance.*
 
 | Setting | Description | Type | Default |
 |---------|-------------|------|---------|

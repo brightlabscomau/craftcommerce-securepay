@@ -41,7 +41,7 @@ Configure the following **required** settings:
 ### 4. Advanced Configuration (Optional)
 
 **JavaScript SDK Features:**
-- **Use JavaScript SDK**: Enable for enhanced security (recommended)
+- **Always Enabled**: JavaScript SDK is always active for enhanced security and PCI compliance
 - **Allowed Card Types**: Select supported card brands
 - **Custom Styling**: Configure colors, fonts, and appearance
 

@@ -73,15 +73,13 @@ class Gateway extends BaseGateway
      */
     public bool $dynamicCurrencyConversion = false;
 
-    /**
-     * @var bool Use JavaScript SDK for enhanced security
-     */
-    public bool $useJavaScriptSDK = true;
 
     /**
      * @var string Fraud detection provider (fraudguard or aci)
      */
     public string $fraudProvider = 'fraudguard';
+
+
 
     /**
      * @var string Background color for JS SDK
@@ -191,10 +189,8 @@ class Gateway extends BaseGateway
         $previousMode = $view->getTemplateMode();
         $view->setTemplateMode(View::TEMPLATE_MODE_CP);
 
-        // Register JavaScript SDK if enabled
-        if ($this->useJavaScriptSDK) {
-            $this->registerJavaScriptSDK($view);
-        }
+        // Always register JavaScript SDK
+        $this->registerJavaScriptSDK($view);
         
         $html = $view->renderTemplate('securepay/payment-form', $params);
 
@@ -258,10 +254,6 @@ class Gateway extends BaseGateway
                 card: { // card specific config options / callbacks
                     showCardIcons: " . ($this->showCardIcons ? 'true' : 'false') . ",
                     allowedCardTypes: " . Json::encode($this->allowedCardTypes) . ",
-                    onFormValidityChange: function(valid) {
-                        alert(3);
-                        console.log(valid);
-                    },
                     onTokeniseSuccess: function(tokenisedCard) {
                         alert(1);
                         console.log(tokenisedCard);
@@ -571,7 +563,6 @@ class Gateway extends BaseGateway
             'threeDSecure' => '3D Secure',
             'applePay' => 'Apple Pay',
             'dynamicCurrencyConversion' => 'Dynamic Currency Conversion',
-            'useJavaScriptSDK' => 'Use JavaScript SDK',
             'fraudProvider' => 'Fraud Detection Provider',
             'backgroundColor' => 'Background Color',
             'labelFontFamily' => 'Label Font Family',
@@ -596,7 +587,7 @@ class Gateway extends BaseGateway
         $rules = parent::rules();
         $rules[] = [['clientId', 'clientSecret', 'merchantCode'], 'required'];
         $rules[] = [['clientId', 'clientSecret', 'merchantCode', 'fraudProvider', 'paymentType', 'backgroundColor', 'labelFontFamily', 'labelFontSize', 'labelFontColor', 'inputFontFamily', 'inputFontSize', 'inputFontColor'], 'string'];
-        $rules[] = [['sandboxMode', 'fraudDetection', 'threeDSecure', 'applePay', 'dynamicCurrencyConversion', 'useJavaScriptSDK', 'showCardIcons', 'paypalPayments', 'directEntryPayments', 'cardPayments'], 'boolean'];
+        $rules[] = [['sandboxMode', 'fraudDetection', 'threeDSecure', 'applePay', 'dynamicCurrencyConversion', 'showCardIcons', 'paypalPayments', 'directEntryPayments', 'cardPayments'], 'boolean'];
         $rules[] = [['fraudProvider'], 'in', 'range' => ['fraudguard', 'aci']];
         $rules[] = [['paymentType'], 'in', 'range' => ['purchase', 'authorize']];
         $rules[] = [['allowedCardTypes'], 'each', 'rule' => ['in', 'range' => ['visa', 'mastercard', 'amex', 'diners']]];
@@ -637,7 +628,7 @@ class Gateway extends BaseGateway
             ];
 
             // Handle JavaScript SDK tokenized payments
-            if ($this->useJavaScriptSDK && !empty($form->token)) {
+            if (!empty($form->token)) {
                 $paymentData['payment'] = [
                     'token' => $form->token,
                 ];

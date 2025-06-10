@@ -19,133 +19,28 @@
         </div>
     {% endif %}
 
-    {% if gateway.useJavaScriptSDK %}
-        {# JavaScript SDK Integration - Following Official Documentation #}
-        <div class="field">
-            <div class="heading">
-                <label>{{ 'Payment Details'|t('commerce') }}</label>
-            </div>
-            <div class="instructions">
-                <p>{{ 'Powered by SecurePay for secure payment processing'|t('commerce') }}</p>
-            </div>
+    {# JavaScript SDK Integration - Following Official Documentation #}
+    <div class="field">
+        <div class="heading">
+            <label>{{ 'Payment Details'|t('commerce') }}</label>
         </div>
-
-        {# SecurePay UI Component Container #}
-        <div id="securepay-card-component" class="securepay-card-component">
-            {# This will be populated by the SecurePay JavaScript SDK #}
+        <div class="instructions">
+            <p>{{ 'Powered by SecurePay for secure payment processing'|t('commerce') }}</p>
         </div>
+    </div>
 
+    {# SecurePay UI Component Container #}
+    <div id="securepay-card-component" class="securepay-card-component">
+        {# This will be populated by the SecurePay JavaScript SDK #}
+    </div>
+    <form onsubmit="return false;">
         {# Hidden fields for Craft Commerce form submission #}
         <input type="hidden" name="paymentToken" id="payment-token" value="">
         <input type="hidden" name="paymentMethod" id="payment-method" value="securepay-js">
         <input type="hidden" name="deviceFingerprint" id="device-fingerprint" value="">
         <button class="button submit" onclick="window.mySecurePayUI.tokenise();return false;">Submit</button>
         <button class="button reset" onclick="window.mySecurePayUI.reset();return false;">Reset</button>
-    {% else %}
-        {# Traditional Credit Card Form for Direct API Integration #}
-        <div class="field">
-            <div class="heading">
-                <label>{{ 'Credit Card Details'|t('commerce') }}</label>
-            </div>
-        </div>
-
-        {{ forms.textField({
-            label: 'Card Number'|t('commerce'),
-            placeholder: '1234 5678 9012 3456',
-            autocomplete: 'cc-number',
-            id: 'number',
-            name: 'number',
-            maxlength: 19,
-            class: 'cc-number',
-            required: true,
-            value: paymentForm.number ?? '',
-        }) }}
-
-        <div class="flex -mx-2">
-            <div class="w-1/2 px-2">
-                {{ forms.selectField({
-                    label: 'Expiry Month'|t('commerce'),
-                    id: 'month',
-                    name: 'month',
-                    value: paymentForm.month ?? '',
-                    options: {
-                        '01': '01 - January',
-                        '02': '02 - February',
-                        '03': '03 - March',
-                        '04': '04 - April',
-                        '05': '05 - May',
-                        '06': '06 - June',
-                        '07': '07 - July',
-                        '08': '08 - August',
-                        '09': '09 - September',
-                        '10': '10 - October',
-                        '11': '11 - November',
-                        '12': '12 - December',
-                    },
-                    required: true,
-                }) }}
-            </div>
-            <div class="w-1/2 px-2">
-                {% set currentYear = date().format('Y') %}
-                {% set years = {} %}
-                {% for i in 0..10 %}
-                    {% set year = currentYear + i %}
-                    {% set years = years|merge({(year): year}) %}
-                {% endfor %}
-                {{ forms.selectField({
-                    label: 'Expiry Year'|t('commerce'),
-                    id: 'year',
-                    name: 'year',
-                    value: paymentForm.year ?? '',
-                    options: years,
-                    required: true,
-                }) }}
-            </div>
-        </div>
-
-        <div class="flex -mx-2">
-            <div class="w-1/2 px-2">
-                {{ forms.textField({
-                    label: 'CVV'|t('commerce'),
-                    placeholder: '123',
-                    autocomplete: 'cc-csc',
-                    id: 'cvv',
-                    name: 'cvv',
-                    maxlength: 4,
-                    class: 'cc-csc',
-                    required: true,
-                    value: paymentForm.cvv ?? '',
-                }) }}
-            </div>
-            <div class="w-1/2 px-2">
-                {# Empty div for layout balance #}
-            </div>
-        </div>
-
-        <div class="flex -mx-2">
-            <div class="w-1/2 px-2">
-                {{ forms.textField({
-                    label: 'First Name'|t('commerce'),
-                    autocomplete: 'cc-given-name',
-                    id: 'firstName',
-                    name: 'firstName',
-                    required: true,
-                    value: paymentForm.firstName ?? '',
-                }) }}
-            </div>
-            <div class="w-1/2 px-2">
-                {{ forms.textField({
-                    label: 'Last Name'|t('commerce'),
-                    autocomplete: 'cc-family-name',
-                    id: 'lastName',
-                    name: 'lastName',
-                    required: true,
-                    value: paymentForm.lastName ?? '',
-                }) }}
-            </div>
-        </div>
-    {% endif %}
-
+    </form>
     {% if gateway.applePay %}
         <div class="field apple-pay-container">
             <div class="heading">
@@ -192,7 +87,6 @@
     </div>
 </div>
 
-{% if gateway.useJavaScriptSDK %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof window.securePayInstance !== 'undefined') {
@@ -426,133 +320,4 @@ function showProcessing(show) {
     }
 }
 </script>
-{% endif %}
 
-<style>
-.securepay-payment-form .flex {
-    display: flex;
-}
-.securepay-payment-form .w-1\/2 {
-    width: 50%;
-}
-.securepay-payment-form .-mx-2 {
-    margin-left: -0.5rem;
-    margin-right: -0.5rem;
-}
-.securepay-payment-form .px-2 {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-}
-
-.securepay-card-component {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 12px;
-    margin-bottom: 16px;
-    min-height: 50px;
-    background: white;
-    transition: border-color 0.3s ease;
-}
-
-.securepay-card-component:focus-within {
-    border-color: #0066cc;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
-}
-
-.apple-pay-button {
-    -webkit-appearance: -apple-pay-button;
-    -apple-pay-button-type: buy;
-    -apple-pay-button-style: black;
-    width: 100%;
-    height: 44px;
-    cursor: pointer;
-    margin: 16px 0;
-    border-radius: 4px;
-}
-
-.payment-processing {
-    text-align: center;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 4px;
-}
-
-.spinner {
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #0066cc;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 10px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.dcc-options {
-    margin-top: 12px;
-}
-
-.dcc-option {
-    display: block;
-    margin-bottom: 8px;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.dcc-option:hover {
-    background-color: #f5f5f5;
-}
-
-.dcc-option input[type="radio"] {
-    margin-right: 8px;
-}
-
-.dcc-option small {
-    color: #666;
-    font-size: 0.9em;
-}
-
-.securepay-error {
-    margin-bottom: 16px;
-    padding: 12px;
-    border-radius: 4px;
-    background-color: #fee;
-    border: 1px solid #fcc;
-    color: #900;
-}
-
-/* Security indicators */
-.field .heading label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .securepay-payment-form .flex {
-        flex-direction: column;
-    }
-    
-    .securepay-payment-form .w-1\/2 {
-        width: 100%;
-    }
-    
-    .securepay-payment-form .-mx-2 {
-        margin: 0;
-    }
-    
-    .securepay-payment-form .px-2 {
-        padding: 0;
-        margin-bottom: 1rem;
-    }
-}
-</style> 

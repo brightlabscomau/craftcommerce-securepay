@@ -115,10 +115,8 @@ public function getPaymentFormHtml(array $params = []): ?string
     $previousMode = $view->getTemplateMode();
     $view->setTemplateMode(View::TEMPLATE_MODE_CP);
 
-    // Register JavaScript SDK if enabled
-    if ($this->useJavaScriptSDK) {
+            // Always register JavaScript SDK
         $this->registerJavaScriptSDK($view);
-    }
     
     $html = $view->renderTemplate('securepay/payment-form', $params);
     $view->setTemplateMode($previousMode);
@@ -413,12 +411,10 @@ Each gateway can be configured independently:
 
 ```php
 // Gateway 1: Basic card processing
-$gateway1->useJavaScriptSDK = false;
 $gateway1->threeDSecure = false;
 $gateway1->fraudDetection = false;
 
-// Gateway 2: Full security features
-$gateway2->useJavaScriptSDK = true;
+// Gateway 2: Full security features  
 $gateway2->threeDSecure = true;
 $gateway2->fraudDetection = true;
 $gateway2->applePay = true;

@@ -10,6 +10,14 @@
         <p>{{ 'Enter your SecurePay API credentials. You can obtain these from your SecurePay merchant portal.'|t('commerce') }}</p>
     </div>
 </div>
+{{ forms.textField({
+    label: 'Merchant Code'|t('commerce'),
+    id: 'merchantCode',
+    name: 'merchantCode',
+    value: gateway.merchantCode,
+    required: true,
+    instructions: 'The merchant code provided by SecurePay.'|t('commerce'),
+}) }}
 
 {{ forms.textField({
     label: 'Client ID'|t('commerce'),
@@ -29,14 +37,7 @@
     instructions: 'The client secret provided by SecurePay for API authentication.'|t('commerce'),
 }) }}
 
-{{ forms.textField({
-    label: 'Merchant Code'|t('commerce'),
-    id: 'merchantCode',
-    name: 'merchantCode',
-    value: gateway.merchantCode,
-    required: true,
-    instructions: 'The merchant code provided by SecurePay.'|t('commerce'),
-}) }}
+
 
 <hr>
 
@@ -55,13 +56,7 @@
 }) }}
 
 
-{{ forms.lightswitchField({
-    label: 'Use JavaScript SDK'|t('commerce'),
-    id: 'useJavaScriptSDK',
-    name: 'useJavaScriptSDK',
-    on: gateway.useJavaScriptSDK,
-    instructions: 'Enable the SecurePay JavaScript SDK for enhanced security and PCI compliance. Recommended for production.'|t('commerce'),
-}) }}
+
 
 <div id="js-sdk-styling">
     <hr>
@@ -302,17 +297,3 @@
     </div>
 </div> 
 
-{% js %}
-const lightswitch = document.querySelector('#types-craft-securepay-gateways-Gateway-useJavaScriptSDK.lightswitch');
-const sdkSection = document.querySelector('#types-craft-securepay-gateways-Gateway-js-sdk-styling');
-
-const observer = new MutationObserver(() => {
-    const isOn = lightswitch.classList.contains('on');
-    sdkSection.classList.toggle('hidden', !isOn);
-});
-
-const isOn = lightswitch.classList.contains('on');
-sdkSection.classList.toggle('hidden', !isOn);
-
-observer.observe(lightswitch, { attributes: true, attributeFilter: ['class'] });
-{% endjs %}
