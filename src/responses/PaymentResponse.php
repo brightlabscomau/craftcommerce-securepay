@@ -1,6 +1,6 @@
 <?php
 
-namespace craft\securepay\responses;
+namespace brightlabs\securepay\responses;
 
 use craft\commerce\base\RequestResponseInterface;
 

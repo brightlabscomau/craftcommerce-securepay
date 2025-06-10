@@ -1,5 +1,5 @@
 {
-    "name": "craftcms/craft-securepay",
+    "name": "brightlabs/craft-securepay",
     "description": "SecurePay payment gateway for Craft Commerce",
     "type": "craft-plugin",
     "version": "1.0.0",
@@ -14,8 +14,8 @@
         "securepay"
     ],
     "support": {
-        "docs": "https://github.com/craftcms/craft-securepay/blob/main/README.md",
-        "issues": "https://github.com/craftcms/craft-securepay/issues"
+        "docs": "https://github.com/brightlabs/craft-securepay/blob/main/README.md",
+        "issues": "https://github.com/brightlabs/craft-securepay/issues"
     },
     "license": "MIT",
     "authors": [
@@ -33,7 +33,7 @@
     },
     "autoload": {
         "psr-4": {
-            "craft\\securepay\\": "src/"
+            "brightlabs\\securepay\\": "src/"
         }
     },
     "extra": {
@@ -41,8 +41,8 @@
         "handle": "securepay",
         "developer": "Brightlabs",
         "developerUrl": "https://brightlabs.com.au/",
-        "documentationUrl": "https://github.com/craftcms/craft-securepay/blob/main/README.md",
-        "changelogUrl": "https://raw.githubusercontent.com/craftcms/craft-securepay/main/CHANGELOG.md",
-        "class": "craft\\securepay\\Plugin"
+        "documentationUrl": "https://github.com/brightlabs/craft-securepay/blob/main/README.md",
+        "changelogUrl": "https://raw.githubusercontent.com/brightlabs/craft-securepay/main/CHANGELOG.md",
+        "class": "brightlabs\\securepay\\Plugin"
     }
 } 

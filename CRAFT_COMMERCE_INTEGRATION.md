@@ -10,7 +10,7 @@ The SecurePay plugin extends the Craft Commerce `BaseGateway` class and implemen
 
 ### Class Structure
 ```php
-namespace craft\securepay\gateways;
+namespace brightlabs\securepay\gateways;
 
 class Gateway extends BaseGateway
 ```

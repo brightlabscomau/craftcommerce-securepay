@@ -1,6 +1,6 @@
 <?php
 
-namespace craft\securepay\gateways;
+namespace brightlabs\securepay\gateways;
 
 use Craft;
 use craft\commerce\base\Gateway as BaseGateway;
@@ -12,8 +12,8 @@ use craft\commerce\elements\Order;
 use craft\helpers\Json;
 use craft\helpers\StringHelper;
 use craft\helpers\UrlHelper;
-use craft\securepay\models\SecurePayPaymentForm;
-use craft\securepay\responses\PaymentResponse;
+use brightlabs\securepay\models\SecurePayPaymentForm;
+use brightlabs\securepay\responses\PaymentResponse;
 use craft\web\Response as WebResponse;
 use craft\web\View;
 use GuzzleHttp\Client;
@@ -24,7 +24,7 @@ use GuzzleHttp\Exception\RequestException;
  *
  * Following the official Craft Commerce payment gateway patterns
  * @see https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html
- *
+ * 
  * @author Brightlabs
  * @since 1.0
  */
@@ -156,14 +156,17 @@ class Gateway extends BaseGateway
 
     /**
      * @inheritdoc
+     * for displaying the name of the gateway in the admin panel
      */
     public static function displayName(): string
     {
         return Craft::t('commerce', 'SecurePay');
     }
 
+    
     /**
      * @inheritdoc
+     * for displaying the settings in the admin panel
      */
     public function getSettingsHtml(): ?string
     {
@@ -287,6 +290,7 @@ class Gateway extends BaseGateway
      */
     public function availableForUseWithOrder(Order $order): bool
     {
+     
         // Log the availability check for debugging
         Craft::info('SecurePay availability check for order ID: ' . $order->id, __METHOD__);
         
@@ -299,7 +303,7 @@ class Gateway extends BaseGateway
         }
 
         // Check if gateway is enabled
-        if (!$this->enabled) {
+        if (!$this->isFrontendEnabled) {
             Craft::info('SecurePay unavailable: Gateway is disabled', __METHOD__);
             return false;
         }
@@ -324,7 +328,6 @@ class Gateway extends BaseGateway
         //     Craft::info('SecurePay unavailable: Country restriction (country: ' . $order->billingAddress->countryCode . ')', __METHOD__);
         //     return false;
         // }
-
         Craft::info('SecurePay available for order ID: ' . $order->id, __METHOD__);
         return true;
     }
@@ -334,6 +337,8 @@ class Gateway extends BaseGateway
      */
     public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
+        echo 4;
+        exit();
         return $this->createPayment($transaction, $form, false);
     }
 
@@ -399,6 +404,8 @@ class Gateway extends BaseGateway
      */
     public function purchase(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
+        echo 5;
+        exit();
         return $this->createPayment($transaction, $form, true);
     }
 
@@ -492,7 +499,7 @@ class Gateway extends BaseGateway
      */
     public function supportsPaymentSources(): bool
     {
-        return false; // Could be true if implementing payment instruments
+        return true; // Could be true if implementing payment instruments
     }
 
     /**

@@ -1,8 +1,8 @@
 <?php
 
-namespace craft\securepay\models;
+namespace brightlabs\securepay\models;
 
-use craft\commerce\models\payments\CreditCardPaymentForm;
+use craft\commerce\models\payments\BasePaymentForm;
 
 /**
  * SecurePay Payment Form
@@ -13,7 +13,7 @@ use craft\commerce\models\payments\CreditCardPaymentForm;
  * @author Brightlabs
  * @since 1.0
  */
-class SecurePayPaymentForm extends CreditCardPaymentForm
+class SecurePayPaymentForm extends BasePaymentForm
 {
     /**
      * @var string|null Payment token from JavaScript SDK

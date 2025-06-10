@@ -1,5 +1,5 @@
-{# @var gateway craft\securepay\gateways\Gateway #}
-{# @var paymentForm craft\securepay\models\SecurePayPaymentForm #}
+{# @var gateway brightlabs\securepay\gateways\Gateway #}
+{# @var paymentForm brightlabs\securepay\models\SecurePayPaymentForm #}
 {% do view.registerCss("
 #securepay-card-component iframe{
     width: 100%;
@@ -35,9 +35,9 @@
     </div>
     <form onsubmit="return false;">
         {# Hidden fields for Craft Commerce form submission #}
-        <input type="hidden" name="paymentToken" id="payment-token" value="">
+        <input type="hidden" name="paymentToken" id="payment-token" value="Arash">
         <input type="hidden" name="paymentMethod" id="payment-method" value="securepay-js">
-        <input type="hidden" name="deviceFingerprint" id="device-fingerprint" value="">
+        <input type="hidden" name="deviceFingerprint" id="device-fingerprint" value="Arash">
         <button class="button submit" onclick="window.mySecurePayUI.tokenise();return false;">Submit</button>
         <button class="button reset" onclick="window.mySecurePayUI.reset();return false;">Reset</button>
     </form>

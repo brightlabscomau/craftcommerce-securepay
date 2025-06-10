@@ -1,10 +1,10 @@
 <?php
 
-namespace craft\securepay;
+namespace brightlabs\securepay;
 
 use craft\commerce\services\Gateways;
 use craft\events\RegisterComponentTypesEvent;
-use craft\securepay\gateways\Gateway;
+use brightlabs\securepay\gateways\Gateway;
 use yii\base\Event;
 
 /**
