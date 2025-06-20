@@ -7,7 +7,7 @@ use craft\commerce\models\payments\BasePaymentForm;
 /**
  * SecurePay Payment Form
  *
- * Supports both traditional credit card input and JavaScript SDK tokenization
+ * Supports JavaScript SDK tokenization
  * following Craft Commerce payment gateway patterns
  *
  * @author Brightlabs
@@ -21,12 +21,12 @@ class SecurePayPaymentForm extends BasePaymentForm
     public ?string $token = null;
 
     /**
-     * @var string|null Payment method type (card, apple-pay, etc.)
+     * @var string|null Payment Created At
      */
     public ?string $createdAt = null;
 
     /**
-     * @var array|null DCC selection data
+     * @var string|null Payment Card Scheme
      */
     public ?string $scheme = null;
 
@@ -54,27 +54,14 @@ class SecurePayPaymentForm extends BasePaymentForm
     }
 
     /**
-     * Check if this is an Apple Pay payment
-     */
-    public function isApplePayPayment(): bool
-    {
-        return $this->paymentMethod === 'apple-pay' || $this->paymentMethod === 'applepay';
-    }
-
-    /**
      * Get the payment method description for logging/display
      */
     public function getPaymentMethodDescription(): string
     {
-        if ($this->isApplePayPayment()) {
-            return 'Apple Pay';
-        }
-
         if ($this->isTokenizedPayment()) {
             return 'Credit Card (Tokenized)';
         }
-
-        return 'Credit Card (Direct)';
+        return 'Credit Card';
     }
 
 } 

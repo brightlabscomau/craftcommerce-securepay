@@ -19,8 +19,8 @@ The gateway follows the standard Commerce gateway architecture:
 
 1. **Configuration Management** - Individual gateway settings (no global plugin settings)
 2. **Feature Support Declaration** - Methods that return true/false for supported features
-3. **Payment Processing** - Core methods for authorize, capture, refund operations
-4. **Form Handling** - Payment form generation with JavaScript SDK and direct API support
+3. **Payment Processing** - Core methods for purchase operations (authorize/capture not yet implemented)
+4. **Form Handling** - Payment form generation with JavaScript SDK integration
 5. **Response Processing** - Standardized `PaymentResponse` objects
 6. **Webhook Support** - Real-time event processing via Commerce webhook system
 
@@ -52,10 +52,12 @@ public function supportsRefund(): bool { return true; }
 public function supportsPartialRefund(): bool { return true; }
 public function supportsWebhooks(): bool { return true; }
 public function supportsPartialPayments(): bool { return true; }
-public function supportsPaymentSources(): bool { return false; } // Future version
+public function supportsPaymentSources(): bool { return false; } // Not implemented
 public function supportsCompleteAuthorize(): bool { return true; }
 public function supportsCompletePurchase(): bool { return true; }
 ```
+
+**Note**: While the gateway declares support for authorize/capture/refund operations, these methods currently return error responses as they are not yet implemented in this version.
 
 ### 3. Order Availability Check
 
@@ -65,23 +67,18 @@ The gateway implements order-specific availability checking:
 public function availableForUseWithOrder(Order $order): bool
 {
     // Gateway must be enabled
-    if (!$this->enabled) {
+    if (!$this->isFrontendEnabled) {
         return false;
     }
     
     // Required credentials check
     if (!$this->clientId || !$this->clientSecret || !$this->merchantCode) {
-        Craft::warning('SecurePay gateway unavailable: Missing required credentials', __METHOD__);
+        Craft::info('SecurePay unavailable: Missing credentials', __METHOD__);
         return false;
     }
 
     // Don't allow $0 transactions
     if ($order->getOutstandingBalance() <= 0) {
-        return false;
-    }
-
-    // Don't allow completed orders
-    if ($order->isCompleted) {
         return false;
     }
 
@@ -115,8 +112,8 @@ public function getPaymentFormHtml(array $params = []): ?string
     $previousMode = $view->getTemplateMode();
     $view->setTemplateMode(View::TEMPLATE_MODE_CP);
 
-            // Always register JavaScript SDK
-        $this->registerJavaScriptSDK($view);
+    // Always register JavaScript SDK
+    $this->registerJavaScriptSDK($view);
     
     $html = $view->renderTemplate('securepay/payment-form', $params);
     $view->setTemplateMode($previousMode);
@@ -127,40 +124,25 @@ public function getPaymentFormHtml(array $params = []): ?string
 
 ### 3. Form Validation
 
-The payment form model extends Commerce's `CreditCardPaymentForm`:
+The payment form model extends Commerce's `BasePaymentForm`:
 
 ```php
-class SecurePayPaymentForm extends CreditCardPaymentForm
+class SecurePayPaymentForm extends BasePaymentForm
 {
     public ?string $token = null;
-    public ?string $paymentMethod = null;
-    public ?array $dccSelection = null;
-    public ?string $deviceFingerprint = null;
+    public ?string $createdAt = null;
+    public ?string $scheme = null;
     
-    public function rules(): array
+    protected function defineRules(): array
     {
-        $rules = parent::rules();
-        
-        // If we have a token from the JavaScript SDK, we don't need traditional card validation
-        if ($this->token) {
-            // Remove required validation for card fields when using token
-            $requiredRules = array_filter($rules, function($rule) {
-                return !(is_array($rule) && isset($rule[1]) && $rule[1] === 'required');
-            });
-            
-            // Add token validation
-            $requiredRules[] = [['token'], 'required'];
-            $requiredRules[] = [['token'], 'string'];
-            
-            return $requiredRules;
-        }
-
-        // Traditional validation for direct card entry
-        $rules[] = [['paymentMethod'], 'string'];
-        $rules[] = [['deviceFingerprint'], 'string'];
-        $rules[] = [['dccSelection'], 'safe'];
-        
+        $rules = parent::defineRules();
+        $rules[] = [['token','createdAt','scheme'], 'required'];
         return $rules;
+    }
+    
+    public function isTokenizedPayment(): bool
+    {
+        return !empty($this->token);
     }
 }
 ```
@@ -177,20 +159,19 @@ public function purchase(Transaction $transaction, BasePaymentForm $form): Reque
 }
 ```
 
-#### Authorize (Capture Later)
+#### Authorize (Capture Later) - Not Yet Implemented
 ```php
 public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
 {
-    return $this->createPayment($transaction, $form, false);
+    return new PaymentResponse(['error' => 'Authorize not supported']);
 }
 ```
 
-#### Capture
+#### Capture - Not Yet Implemented
 ```php
 public function capture(Transaction $transaction, string $reference): RequestResponseInterface
 {
-    $response = $this->sendRequest('POST', '/v2/payments/preauth/' . $reference . '/capture', $captureData);
-    return new PaymentResponse($response);
+    return new PaymentResponse(['error' => 'Capture not supported']);
 }
 ```
 
@@ -203,11 +184,18 @@ All payment methods return a `RequestResponseInterface` implementation:
 ```php
 class PaymentResponse implements RequestResponseInterface
 {
-    public function isSuccessful(): bool { ... }
-    public function isRedirect(): bool { ... }
-    public function getRedirectUrl(): string { ... }
-    public function getTransactionReference(): string { ... }
-    public function getMessage(): string { ... }
+    public function isSuccessful(): bool 
+    { 
+        if (!isset($this->data['error']) && isset($this->data['status'])) {
+            return $this->data['status'] === 'paid';
+        }
+        return false;
+    }
+    
+    public function isProcessing(): bool { return true; }
+    public function isRedirect(): bool { return false; }
+    public function getTransactionReference(): string { return $this->data['bankTransactionId'] ?? ''; }
+    public function getMessage(): string { return $this->data['gatewayResponseMessage'] ?? ''; }
     // ... other required methods
 }
 ```
@@ -215,17 +203,12 @@ class PaymentResponse implements RequestResponseInterface
 ### 2. Payment Flow Responses
 
 **Successful Payment**: 
-- `isSuccessful()` returns `true`
+- `isSuccessful()` returns `true` when status is 'paid'
 - Customer redirected to order return URL
 
 **Failed Payment**:
 - `isSuccessful()` returns `false`
 - Customer shown error message and can retry
-
-**3D Secure Redirect**:
-- `isRedirect()` returns `true`
-- Customer redirected to authentication page
-- Returns to completion URL with transaction hash
 
 **Processing State**:
 - `isProcessing()` returns `true`
@@ -238,46 +221,56 @@ class PaymentResponse implements RequestResponseInterface
 
 Following Commerce frontend patterns:
 
-```javascript
-// Automatic SDK loading
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof window.securePayInstance !== 'undefined') {
-        initializeSecurePayForm();
-    } else {
-        window.addEventListener('securepay-loaded', initializeSecurePayForm);
-    }
-});
+```php
+private function registerJavaScriptSDK($view): void
+{
+    $baseUrl = $this->sandboxMode 
+        ? Endpoint::ENDPOINT_API_SANDBOX
+        : Endpoint::ENDPOINT_API_LIVE;
+        
+    $jsUrl = $this->sandboxMode 
+        ? Endpoint::URL_SANDBOX_SCRIPT
+        : Endpoint::URL_LIVE_SCRIPT;
+
+    // Register the SecurePay JavaScript SDK
+    $view->registerScript('', View::POS_END, [
+        'src' => $jsUrl,
+        'id'  => 'securepay-ui-js'
+    ]); 
+}
 ```
 
 ### 2. Form Submission Handling
 
-Integrates with Commerce form submission patterns:
+The payment form template provides the UI component container:
 
-```javascript
-function handleFormSubmit(event) {
-    event.preventDefault();
-    
-    // Tokenize payment details
-    window.securePayInstance.createToken(window.securePayCard).then(function(result) {
-        if (result.error) {
-            showError(result.error.message);
-        } else {
-            // Add token to form and submit to Commerce
-            document.getElementById('payment-token').value = result.token.id;
-            form.submit(); // Submits to /commerce/payments/pay
-        }
-    });
-}
+```twig
+{# plugins/securepay/src/templates/payment-form.twig #}
+<div class="securepay-payment-form" id="securepay-payment-form">
+    <div id="securepay-card-component" class="securepay-card-component">
+        {# This will be populated by the SecurePay JavaScript SDK #}
+    </div>
+    <input type="hidden" name="scheme" id="cartScheme" value="">
+    <input type="hidden" name="createdAt" id="cartCreatedAt" value="">
+    <input type="hidden" name="token" id="cartToken" value="">
+</div>
 ```
 
 ## Admin Interface Integration
 
 ### 1. Gateway Settings
 
-The gateway provides a configuration interface following Commerce patterns:
+The gateway provides a comprehensive configuration interface following Commerce patterns:
 
 ```twig
 {# plugins/securepay/src/templates/gateway-settings.twig #}
+{{ forms.textField({
+    label: 'Merchant Code'|t('commerce'),
+    name: 'merchantCode',
+    value: gateway.merchantCode,
+    required: true,
+}) }}
+
 {{ forms.textField({
     label: 'Client ID'|t('commerce'),
     name: 'clientId',
@@ -285,31 +278,55 @@ The gateway provides a configuration interface following Commerce patterns:
     required: true,
 }) }}
 
-{{ forms.selectField({
-    label: 'Payment Type'|t('commerce'),
-    name: 'paymentType', 
-    value: gateway.paymentType,
-    options: gateway.getPaymentTypeOptions(),
+{{ forms.passwordField({
+    label: 'Client Secret'|t('commerce'),
+    name: 'clientSecret',
+    value: gateway.clientSecret,
+    required: true,
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Sandbox Mode'|t('commerce'),
+    name: 'sandboxMode',
+    on: gateway.sandboxMode,
 }) }}
 ```
 
-### 2. Transaction Management
+### 2. JavaScript SDK Styling Options
+
+The gateway provides extensive styling customization:
+
+```twig
+{{ forms.colorField({
+    label: 'Background Color'|t('commerce'),
+    name: 'backgroundColor',
+    value: gateway.backgroundColor,
+}) }}
+
+{{ forms.textField({
+    label: 'Label Font Family'|t('commerce'),
+    name: 'labelFontFamily',
+    value: gateway.labelFontFamily,
+}) }}
+
+{{ forms.checkboxSelectField({
+    label: 'Allowed Card Types'|t('commerce'),
+    name: 'allowedCardTypes',
+    values: gateway.allowedCardTypes,
+    options: [
+        { label: 'Visa', value: 'visa' },
+        { label: 'Mastercard', value: 'mastercard' },
+        { label: 'American Express', value: 'amex' },
+        { label: 'Diners Club', value: 'diners' }
+    ],
+}) }}
+```
+
+### 3. Transaction Management
 
 Commerce automatically provides:
 - Transaction listing and details
-- Capture functionality for authorized payments
-- Refund processing
 - Payment status tracking
-
-### 3. Webhook URL Display
-
-The settings template shows the webhook URL for configuration:
-
-```twig
-{% if gateway.id %}
-    <code>{{ siteUrl }}actions/commerce/webhooks/process-webhook?gateway={{ gateway.id }}</code>
-{% endif %}
-```
 
 ## Webhook Integration
 
@@ -324,13 +341,16 @@ public function processWebHook(): WebResponse
     
     try {
         $request = Craft::$app->getRequest();
-        $data = Json::decode($request->getRawBody());
-        
+        $body = $request->getRawBody();
+        $data = Json::decode($body);
+
+        // Process the webhook data
         $this->handleWebhookEvent($data);
-        
+
         $response->setStatusCode(200);
         $response->data = 'OK';
     } catch (\Exception $e) {
+        Craft::error('SecurePay webhook error: ' . $e->getMessage(), __METHOD__);
         $response->setStatusCode(400);
         $response->data = 'Error processing webhook';
     }
@@ -346,52 +366,69 @@ Webhook events update transaction status following Commerce patterns:
 ```php
 private function handleWebhookEvent(array $data): void
 {
-    switch ($data['eventType']) {
-        case 'payment.completed':
-            // Update transaction to completed
-            break;
-        case '3ds.completed':
-            // Complete 3D Secure authentication
-            break;
-        case 'payment.failed':
-            // Mark transaction as failed
-            break;
+    // Implementation for processing webhook events
+    // Updates transaction status based on SecurePay events
+}
+```
+
+## Payment Processing Implementation
+
+### 1. Core Payment Creation
+
+The gateway implements payment processing using SecurePay's API:
+
+```php
+private function createPayment(Transaction $transaction, BasePaymentForm $form, bool $capture): RequestResponseInterface
+{
+    try {
+        // Get credential and SecurePay Authentication
+        $this->getCredential();
+        
+        // Get order and payment data
+        $order = $transaction->getOrder();
+        
+        $paymentData = [
+            'merchantCode' => $this->credential->getMerchantCode(),
+            'token' => $this->cardTokenize,
+            'ip' => $this->getOrderIp($order),
+            'amount' => $this->convertAmount($transaction->paymentAmount),
+            'currency' => 'AUD',
+        ];
+
+        if ($order->id) {
+            $paymentData['orderId'] = (string) $order->id;
+        }
+
+        // Create payment request
+        $createPaymentRequest = new CreatePaymentRequest($this->credential->isLive(), $this->credential, $paymentData);
+        $create_payment_result = $createPaymentRequest->execute()->toArray();
+        
+        return new PaymentResponse($create_payment_result);
+    } catch (\Exception $e) {
+        Craft::error('SecurePay payment error: ' . $e->getMessage(), __METHOD__);
+        return new PaymentResponse(['error' => $e->getMessage()]);
     }
 }
 ```
 
-## Completion Flow
+### 2. Authentication and Credential Management
 
-### 1. 3D Secure Completion
-
-For 3D Secure payments, customers return to:
-```
-/commerce/payments/complete-payment?commerceTransactionHash={hash}
-```
-
-The gateway implements completion methods:
+The gateway implements token-based authentication with caching:
 
 ```php
-public function completePurchase(Transaction $transaction): RequestResponseInterface
+public function getCredential()
 {
-    return $this->getTransactionStatus($transaction);
-}
-
-public function completeAuthorize(Transaction $transaction): RequestResponseInterface  
-{
-    return $this->getTransactionStatus($transaction);
-}
-```
-
-### 2. Status Verification
-
-Completion methods verify payment status with SecurePay:
-
-```php
-private function getTransactionStatus(Transaction $transaction): RequestResponseInterface
-{
-    $response = $this->sendRequest('GET', '/v2/payments/' . $transaction->reference);
-    return new PaymentResponse($response);
+    if ($this->credential === null) {
+        $cache = Craft::$app->getCache();
+        $cache_key = "securepay_token2_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCode . $this->clientId . $this->clientSecret);
+        $token = $cache->getOrSet($cache_key, function() {
+            $request = new ClientCredentialsRequest(!$this->sandboxMode, $this->clientId, $this->clientSecret);
+            $response = $request->execute();
+            return $response->getAccessToken();
+        }, 86400); // 1 day cache
+        
+        $this->credential = new Credential(!$this->sandboxMode, $this->merchantCode, $this->clientId, $this->clientSecret, $token);
+    }
 }
 ```
 
@@ -402,7 +439,7 @@ private function getTransactionStatus(Transaction $transaction): RequestResponse
 Store managers can configure multiple SecurePay gateways:
 
 - **Live Gateway**: Production credentials, purchase mode
-- **Staging Gateway**: Sandbox credentials, authorize mode  
+- **Staging Gateway**: Sandbox credentials, purchase mode  
 - **Testing Gateway**: Test credentials, all features enabled
 
 ### 2. Feature Toggles
@@ -411,13 +448,13 @@ Each gateway can be configured independently:
 
 ```php
 // Gateway 1: Basic card processing
-$gateway1->threeDSecure = false;
-$gateway1->fraudDetection = false;
+$gateway1->cardPayments = true;
+$gateway1->showCardIcons = true;
 
-// Gateway 2: Full security features  
-$gateway2->threeDSecure = true;
-$gateway2->fraudDetection = true;
-$gateway2->applePay = true;
+// Gateway 2: Custom styling
+$gateway2->backgroundColor = '#f5f5f5';
+$gateway2->labelFontFamily = 'Roboto, sans-serif';
+$gateway2->allowedCardTypes = ['visa', 'mastercard'];
 ```
 
 ## Error Handling
@@ -428,8 +465,8 @@ Following Commerce error patterns:
 
 ```php
 try {
-    $response = $this->sendRequest('POST', '/v2/payments', $paymentData);
-    return new PaymentResponse($response);
+    $create_payment_result = $createPaymentRequest->execute()->toArray();
+    return new PaymentResponse($create_payment_result);
 } catch (\Exception $e) {
     Craft::error('SecurePay payment error: ' . $e->getMessage(), __METHOD__);
     return new PaymentResponse(['error' => $e->getMessage()]);
@@ -441,10 +478,10 @@ try {
 Commerce handles form validation automatically:
 
 ```php
-public function rules(): array
+protected function defineRules(): array
 {
-    $rules = parent::rules();
-    $rules[] = [['clientId', 'clientSecret', 'merchantCode'], 'required'];
+    $rules = parent::defineRules();
+    $rules[] = [['token','createdAt','scheme'], 'required'];
     return $rules;
 }
 ```
@@ -472,7 +509,7 @@ if (result.error) {
 - Implement proper error handling
 
 ### 2. Performance
-- Cache access tokens appropriately
+- Cache access tokens appropriately (24-hour cache implemented)
 - Use connection pooling for API requests
 - Implement timeout handling
 - Log performance metrics
@@ -484,7 +521,7 @@ if (result.error) {
 - Support form pre-population
 
 ### 4. Testing
-- Test all payment flows (purchase, authorize/capture, refund)
+- Test purchase flow (primary supported operation)
 - Verify webhook handling
 - Test error conditions
 - Validate form submissions
@@ -495,16 +532,33 @@ if (result.error) {
 - [x] Implements `GatewayInterface`
 - [x] Registers with Commerce gateway system
 - [x] Provides feature support methods
-- [x] Implements payment processing methods
+- [x] Implements purchase processing method
 - [x] Returns proper `RequestResponseInterface` objects
 - [x] Handles order availability checking
 - [x] Provides payment form HTML and model
 - [x] Supports webhook processing
 - [x] Integrates with admin interface
 - [x] Follows Commerce URL patterns
-- [x] Handles 3D Secure completion flow
 - [x] Provides proper error handling
 - [x] Supports JavaScript SDK integration
 - [x] Implements configuration validation
+- [ ] Implements authorize/capture operations (planned)
+- [ ] Implements refund operations (planned)
+- [ ] Implements payment sources (planned)
 
-This integration follows all the patterns described in the [official Craft Commerce payment gateway documentation](https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html) and provides a complete, production-ready payment gateway implementation. 
+## Current Limitations
+
+1. **Authorize/Capture Flow**: Not yet implemented - currently only supports immediate purchase
+2. **Refund Operations**: Not yet implemented
+3. **Payment Sources**: Not yet implemented (stored payment methods)
+4. **3D Secure**: Basic support through completion methods
+
+## Future Enhancements
+
+1. **Authorize/Capture**: Implement two-step payment processing
+2. **Refunds**: Add support for full and partial refunds
+3. **Payment Sources**: Support for storing payment methods
+4. **Enhanced 3D Secure**: Improved 3D Secure authentication flow
+5. **Fraud Detection**: Integration with SecurePay's fraud detection features
+
+This integration follows all the patterns described in the [official Craft Commerce payment gateway documentation](https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html) and provides a solid foundation for SecurePay payment processing with room for future enhancements. 

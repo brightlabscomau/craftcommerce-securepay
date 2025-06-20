@@ -17,45 +17,6 @@
     <input type="hidden" name="createdAt" id="cartCreatedAt" value="">
     <input type="hidden" name="token" id="cartToken" value="">
 
-    {% if gateway.applePay %}
-        <div class="field apple-pay-container">
-            <div class="heading">
-                <label>{{ 'Apple Pay'|t('commerce') }}</label>
-            </div>
-            <div class="instructions">
-                <p>{{ 'Pay quickly and securely with Apple Pay'|t('commerce') }}</p>
-            </div>
-            <div id="apple-pay-button" class="apple-pay-button" style="display: none;">
-                {# Apple Pay button will be shown by JavaScript if available #}
-            </div>
-        </div>
-    {% endif %}
-
-    {% if gateway.fraudDetection %}
-        <div class="field">
-            <div class="heading">
-                <label>{{ '🛡️ Fraud Protection'|t('commerce') }}</label>
-            </div>
-            <div class="instructions">
-                <p>{{ 'This payment will be screened for fraud detection using {provider}.'|t('commerce', { provider: gateway.fraudProvider|title }) }}</p>
-            </div>
-        </div>
-    {% endif %}
-
-    {% if gateway.dynamicCurrencyConversion %}
-        <div class="field dcc-container" id="dcc-container" style="display: none;">
-            <div class="heading">
-                <label>{{ 'Currency Conversion'|t('commerce') }}</label>
-            </div>
-            <div class="instructions">
-                <p>{{ 'You can choose to pay in your local currency if available.'|t('commerce') }}</p>
-            </div>
-            <div id="dcc-options">
-                {# DCC options will be populated by JavaScript #}
-            </div>
-        </div>
-    {% endif %}
-
     {# Payment processing status #}
     <div id="payment-processing" class="payment-processing" style="display: none;">
         <div class="spinner"></div>

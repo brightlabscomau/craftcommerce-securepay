@@ -11,7 +11,9 @@ use craft\commerce\base\RequestResponseInterface;
  * @since 1.0
  */
 // successfull data respond
- // Array ( [createdAt] => 2025-06-20T03:43:21.588919675Z [amount] => 86800 [currency] => AUD [status] => paid [bankTransactionId] => 664437 [gatewayResponseCode] => 00 [gatewayResponseMessage] => Transaction successful [customerCode] => anonymous [merchantCode] => 5AR0055 [ip] => 192.168.97.1 [token] => 1738992071975167 [orderId] => 940992 )
+// Array ( [createdAt] => 2025-06-20T03:43:21.588919675Z [amount] => 86800 [currency] => AUD [status] => paid [bankTransactionId] => 664437 [gatewayResponseCode] => 00 [gatewayResponseMessage] => Transaction successful [customerCode] => anonymous [merchantCode] => 5AR0055 [ip] => 192.168.97.1 [token] => 1738992071975167 [orderId] => 940992 )
+// error data respond
+// Array ( [errors] => Array ( [0] => Array ( [code] => 400 [detail] => Invalid request parameters ) ) )
 class PaymentResponse implements RequestResponseInterface
 {
     /**
@@ -150,75 +152,5 @@ class PaymentResponse implements RequestResponseInterface
     {
         // This method should be implemented if redirect functionality is needed
         // For now, we'll let Craft Commerce handle the redirect
-    }
-
-    
-
-    /**
-     * Check if this is a successful 3D Secure authentication
-     */
-    public function isThreeDSecureSuccessful(): bool
-    {
-        if (!isset($this->data['threeDSecure'])) {
-            return false;
-        }
-
-        $threeDSecure = $this->data['threeDSecure'];
-        
-        return isset($threeDSecure['status']) && 
-               in_array(strtolower($threeDSecure['status']), ['authenticated', 'success']);
-    }
-
-    /**
-     * Check if 3D Secure authentication is required
-     */
-    public function requiresThreeDSecure(): bool
-    {
-        return isset($this->data['threeDSecure']['redirectRequired']) && 
-               $this->data['threeDSecure']['redirectRequired'];
-    }
-
-    /**
-     * Get fraud detection results
-     */
-    public function getFraudResult(): ?array
-    {
-        return $this->data['fraud'] ?? 
-               $this->data['fraudResult'] ?? 
-               null;
-    }
-
-    /**
-     * Check if fraud detection flagged this transaction
-     */
-    public function isFraudulent(): bool
-    {
-        $fraudResult = $this->getFraudResult();
-        
-        if (!$fraudResult) {
-            return false;
-        }
-
-        return isset($fraudResult['decision']) && 
-               strtolower($fraudResult['decision']) === 'reject';
-    }
-
-    /**
-     * Get Dynamic Currency Conversion quote
-     */
-    public function getDccQuote(): ?array
-    {
-        return $this->data['dcc'] ?? 
-               $this->data['dccQuote'] ?? 
-               null;
-    }
-
-    /**
-     * Check if this transaction used Dynamic Currency Conversion
-     */
-    public function usesDcc(): bool
-    {
-        $dccQuote = $this->getDccQuote();
-        return $dccQuote !== null && isset($dccQuote['applied']) && $dccQuote['applied'];
     }
 } 

@@ -4,120 +4,88 @@
 
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
-**Plugin Package**: `craftcms/craft-securepay`  
+**Plugin Package**: `brightlabs/craft-securepay`  
 **Version**: 1.0.0  
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps
 
-### 1. Install the Plugin
-
+### 1. Install the Plugin via Composer
+From your project's root directory, run the following command:
 ```bash
-composer require craftcms/craft-securepay
+composer require brightlabs/craft-securepay
+```
+
+### 2. Install the Plugin in Craft
+In the Craft control panel, go to **Settings → Plugins**, find "SecurePay for Craft Commerce" and click **Install**.
+
+Alternatively, you can run the following command from your terminal:
+```bash
 php craft plugin/install securepay
 ```
 
-### 2. Create a Payment Gateway
+### 3. Create a Payment Gateway
 
-1. Go to **Commerce → System Settings → Gateways**
-2. Click **New Gateway**
-3. Select **SecurePay** as the gateway type
-4. Configure the gateway settings:
-   - **Name**: Give your gateway a descriptive name
-   - **Handle**: Auto-generated handle for the gateway
-   - **Client ID**: Your SecurePay client ID
-   - **Client Secret**: Your SecurePay client secret
-   - **Merchant Code**: Your SecurePay merchant code
-   - **Sandbox Mode**: Enable for testing, disable for live transactions
+1.  Go to **Commerce → System Settings → Gateways**.
+2.  Click the "**New Gateway**" button.
+3.  Give your gateway a descriptive name (e.g., "Credit Card").
+4.  Select **SecurePay** as the gateway type.
+5.  Configure the gateway settings.
 
-### 3. Gateway Configuration
+### 4. Gateway Configuration
 
-Configure the following **required** settings:
-- **Client ID**: Your SecurePay API client identifier
-- **Client Secret**: Your SecurePay API secret key  
-- **Merchant Code**: Your SecurePay merchant code
-- **Sandbox Mode**: Enable for testing, disable for live transactions
+The following settings are **required** for the gateway to function:
+-   **Merchant Code**: Your SecurePay merchant code.
+-   **Client ID**: Your SecurePay API client identifier.
+-   **Client Secret**: Your SecurePay API secret key.
+-   **Sandbox Mode**: Enable for testing, disable for live transactions.
 
-### 4. Advanced Configuration (Optional)
+### 5. Advanced Configuration (Optional)
 
-**JavaScript SDK Features:**
-- **Always Enabled**: JavaScript SDK is always active for enhanced security and PCI compliance
-- **Allowed Card Types**: Select supported card brands
-- **Custom Styling**: Configure colors, fonts, and appearance
+The plugin offers extensive styling options for the payment form, allowing you to match it to your site's design. These settings are available under the "JavaScript SDK Styling" section in the gateway configuration.
 
-**Security Features:**
-- **3D Secure 2.0**: Enable enhanced authentication
-- **Fraud Detection**: Enable fraud screening (FraudGuard or ACI ReD Shield)
+### 6. Testing
 
-**Payment Methods:**
-- **Card Payments**: Standard credit/debit cards (enabled by default)
-- **Apple Pay**: Native Apple Pay support (requires domain verification)
-- **PayPal**: PayPal integration through SecurePay
-- **Direct Entry**: Bank transfers and direct debits
-- **Dynamic Currency Conversion**: Multi-currency support
+1.  Enable **Sandbox Mode** in your gateway settings.
+2.  Use SecurePay's official test card numbers to perform test transactions.
+    -   **Visa**: `4111111111111111`
+    -   **Mastercard**: `5555555555554444`
+    -   **Expiry**: Any future date (e.g., `12/2025`)
+    -   **CVV**: Any 3-4 digit number (e.g., `123`)
 
-### 5. Testing
+### 7. Going Live
 
-1. Enable **Sandbox Mode** in your gateway settings
-2. Use SecurePay test card numbers:
-   - Visa: `4111111111111111`
-   - Mastercard: `5555555555554444`
-   - Expiry: Any future date
-   - CVV: Any 3-4 digit number
-
-### 6. Going Live
-
-1. Apply for merchant approval with SecurePay
-2. Obtain your live credentials
-3. Update your gateway settings with live credentials
-4. Disable **Sandbox Mode**
-5. Test with small transactions before full deployment
-
-## SecurePay Account Setup
-
-1. Visit [SecurePay](https://auspost.com.au/payments/)
-2. Sign up for an account
-3. Complete the verification process
-4. Obtain your API credentials:
-   - Client ID
-   - Client Secret
-   - Merchant Code
+1.  Obtain your live API credentials from your SecurePay merchant account.
+2.  Update your gateway settings in Craft Commerce with the live credentials.
+3.  Disable **Sandbox Mode**.
+4.  Ensure your checkout page is served over HTTPS.
+5.  Perform a small live transaction to confirm everything is working correctly.
 
 ## Support
 
-- **SecurePay Support**: support@securepay.com.au
-- **API Documentation**: [SecurePay API Docs](https://auspost.com.au/payments/docs/securepay/)
-- **Plugin Issues**: Report on GitHub repository
+-   **Plugin Issues**: For bugs or feature requests related to this plugin, please open an issue on the [GitHub repository](https://github.com/brightlabs/craft-securepay/issues).
+-   **SecurePay Account Support**: For issues with your SecurePay account, API credentials, or the SecurePay service itself, please contact SecurePay support directly.
 
 ## Features Status
 
 ✅ **Implemented in v1.0.0**
 - Credit/Debit card payments (Visa, Mastercard, Amex, Diners)
-- JavaScript SDK integration with custom styling
-- Direct API integration
+- Secure, token-based payments via JavaScript SDK integration
+- Extensive payment form styling options
 - Sandbox and live environment support
-- 3D Secure 2.0 authentication
-- Fraud detection (FraudGuard and ACI ReD Shield)
-- Apple Pay support (with domain verification)
-- Dynamic Currency Conversion
-- Authorization and capture workflows
-- Full and partial refunds
-- Webhook support for real-time updates
-- OAuth 2.0 authentication with automatic token management
-- Comprehensive gateway configuration
-- Responsive payment forms
+- OAuth 2.0 authentication with automatic token caching
+- Full configuration within the Craft Commerce admin panel
 
 🚧 **Planned for Future Versions**
-- Stored payment methods (PaymentSource support)  
-- Recurring payments
-- Enhanced webhook event handling
-- Multi-merchant support
-- Advanced fraud rules configuration
+- Authorize and Capture workflows
+- Full and partial refunds
+- 3D Secure 2.0 authentication
+- Fraud detection integration
+- Apple Pay support
+- Dynamic Currency Conversion (DCC)
+- Stored payment methods
 
 ## Security Notes
 
-- All API communications use OAuth 2.0
-- Payment data is processed securely through SecurePay
-- 3D Secure provides additional authentication
-- Fraud detection helps prevent fraudulent transactions
-- PCI DSS compliance is maintained through SecurePay's infrastructure 
+- All API communications use HTTPS and are authenticated with OAuth 2.0.
+- This plugin uses SecurePay's JavaScript SDK to tokenize payment information in the browser, ensuring no sensitive card data ever touches your server. This is essential for PCI DSS SAQ-A compliance. 

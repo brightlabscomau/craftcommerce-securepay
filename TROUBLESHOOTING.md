@@ -2,212 +2,127 @@
 
 This guide helps resolve common issues with the SecurePay payment gateway integration for Craft Commerce.
 
-**Plugin**: `craftcms/craft-securepay` v1.0.0  
-**Support**: GitHub Issues | Craft Discord/Slack  
-**SecurePay Support**: support@securepay.com.au
+**Plugin**: `brightlabs/craft-securepay` v1.0.0  
+**Support**: [GitHub Issues](https://github.com/brightlabs/craft-securepay/issues) | Craft Discord/Slack  
+**SecurePay Support**: For issues with your SecurePay account, please contact SecurePay directly.
 
 ## Quick Checklist
 
 ### ✅ **1. Plugin Installation**
-- [ ] Plugin is installed via composer
-- [ ] Plugin is enabled in Settings → Plugins
-- [ ] No installation errors in logs
+- [ ] Plugin is installed via `composer require brightlabs/craft-securepay`.
+- [ ] Plugin is enabled in **Settings → Plugins**.
+- [ ] No installation errors in `storage/logs/`.
 
 ### ✅ **2. Gateway Configuration**
-- [ ] Gateway created in Commerce → System Settings → Gateways
-- [ ] Gateway is enabled (toggle switched on)
-- [ ] All required credentials are filled in:
-  - Client ID
-  - Client Secret  
+- [ ] Gateway created in **Commerce → System Settings → Gateways**.
+- [ ] Gateway is **Enabled** (toggle switched on).
+- [ ] All required credentials are filled in and correct:
   - Merchant Code
+  - Client ID
+  - Client Secret
+- [ ] **Sandbox Mode** is set correctly for the environment.
 
 ### ✅ **3. Order Requirements**
-- [ ] Order has items with a total > $0
-- [ ] Order has an outstanding balance > $0
-- [ ] Order is not already paid
-
-## Step-by-Step Diagnostic
-
-### Step 1: Verify Plugin Registration
-
-Check if the plugin is properly installed and registered:
-
-```bash
-# Check plugin status
-php craft plugin/list
-# Should show: securepay (enabled)
-
-# Check available gateway types
-php craft help gateways
-# Should list SecurePay as an available type
-```
-
-### Step 2: Check Commerce Gateway Settings
-
-1. Go to **Admin → Commerce → System Settings → Gateways**
-2. Verify you have a SecurePay gateway created
-3. Click on your gateway and check:
-   - ✅ **Enabled** toggle is ON
-   - ✅ **Client ID** is filled
-   - ✅ **Client Secret** is filled  
-   - ✅ **Merchant Code** is filled
-   - ✅ **Payment Type** is set (Purchase or Authorize)
-
-### Step 3: Check Order Status
-
-In your checkout template, add debugging:
-
-```twig
-{# Debug order information #}
-<div style="background: #f0f0f0; padding: 10px; margin: 10px 0;">
-    <h4>Debug Info:</h4>
-    <p><strong>Order Total:</strong> {{ cart.total|currency }}</p>
-    <p><strong>Outstanding Balance:</strong> {{ cart.outstandingBalance|currency }}</p>
-    <p><strong>Order ID:</strong> {{ cart.id }}</p>
-    <p><strong>Available Gateways:</strong></p>
-    <ul>
-        {% for gateway in craft.commerce.gateways.allCustomerEnabledGateways %}
-            <li>{{ gateway.name }} ({{ gateway.handle }}) 
-                {% if gateway.availableForUseWithOrder(cart) %}
-                    ✅ Available
-                {% else %}
-                    ❌ Not Available
-                {% endif %}
-            </li>
-        {% endfor %}
-    </ul>
-</div>
-```
-
-### Step 4: Check Logs
-
-Look for availability check logs:
-
-```bash
-# Check Craft logs
-tail -f storage/logs/web.log | grep -i securepay
-
-# Or check the log files directly
-less storage/logs/web.log
-```
-
-Look for messages like:
-- "SecurePay availability check for order ID: X"
-- "SecurePay unavailable: Missing credentials"
-- "SecurePay unavailable: Gateway is disabled"
-
-### Step 5: Test Gateway Availability Manually
-
-Create a test template to check gateway availability:
-
-```twig
-{# test-gateway.twig #}
-{% set cart = craft.commerce.carts.cart %}
-{% set gateways = craft.commerce.gateways.allCustomerEnabledGateways %}
-
-<h2>Gateway Availability Test</h2>
-
-<h3>Order Information:</h3>
-<ul>
-    <li>Order ID: {{ cart.id }}</li>
-    <li>Total: {{ cart.total|currency }}</li>
-    <li>Outstanding Balance: {{ cart.outstandingBalance|currency }}</li>
-    <li>Is Completed: {{ cart.isCompleted ? 'Yes' : 'No' }}</li>
-</ul>
-
-<h3>All Gateways:</h3>
-{% for gateway in gateways %}
-    <div style="border: 1px solid #ccc; margin: 10px 0; padding: 10px;">
-        <h4>{{ gateway.name }} ({{ gateway.class|split('\\')|last }})</h4>
-        <ul>
-            <li>Handle: {{ gateway.handle }}</li>
-            <li>Enabled: {{ gateway.enabled ? 'Yes' : 'No' }}</li>
-            <li>Available for Order: {{ gateway.availableForUseWithOrder(cart) ? 'Yes' : 'No' }}</li>
-            {% if gateway.class == 'craft\\securepay\\gateways\\Gateway' %}
-                <li>Client ID: {{ gateway.clientId ? 'Set' : 'Missing' }}</li>
-                <li>Client Secret: {{ gateway.clientSecret ? 'Set' : 'Missing' }}</li>
-                <li>Merchant Code: {{ gateway.merchantCode ? 'Set' : 'Missing' }}</li>
-                <li>Sandbox Mode: {{ gateway.sandboxMode ? 'Yes' : 'No' }}</li>
-            {% endif %}
-        </ul>
-    </div>
-{% endfor %}
-```
-
-Access this at: `yoursite.test/test-gateway`
+- [ ] Order has items with a total > $0.
+- [ ] Order has an outstanding balance > $0.
+- [ ] Order is not already paid or completed.
 
 ## Common Issues & Solutions
 
 ### ❌ **Issue: "Gateway not appearing in admin"**
 
 **Solution:**
-1. Clear caches: `php craft cache/flush-all`
-2. Check plugin is enabled: Settings → Plugins → SecurePay
-3. Verify gateway registration in `Plugin.php`
+1. Run `composer install` to ensure all dependencies are installed.
+2. Clear Craft's caches: `php craft cache/flush-all`.
+3. Check that the plugin is enabled in **Settings → Plugins → SecurePay**.
+4. Verify gateway registration in the plugin's `Plugin.php` file.
 
 ### ❌ **Issue: "Gateway appears in admin but not on checkout"**
 
 **Solutions:**
-1. **Check gateway is enabled** in Commerce settings
-2. **Verify credentials** are filled in completely  
-3. **Check order has balance** > $0
-4. **Review logs** for availability check failures
+1. **Check Gateway is Enabled**: Go to **Commerce → System Settings → Gateways** and ensure the "Enabled" toggle is on for your SecurePay gateway.
+2. **Verify Credentials**: Make sure the Merchant Code, Client ID, and Client Secret are all filled in correctly. The gateway will not be available if these are missing.
+3. **Check Order Balance**: The order must have an outstanding balance greater than $0.
+4. **Review Logs**: Check `storage/logs/web.log` for any "SecurePay unavailable" messages, which will give a specific reason.
+
+### ❌ **Issue: "Payment form is blank or I see JavaScript errors in the browser console"**
+
+**Solutions:**
+1.  **Check Browser Console:** Open your browser's developer tools (usually F12) and check the "Console" tab for any errors related to `securepay.min.js` or `SecurePay`.
+2.  **Firewall/Ad-blockers:** Ensure that no ad-blockers or corporate firewalls are blocking the SecurePay JavaScript from loading (`https://payments-stest.npe.auspost.zone` or `https://payments.auspost.net.au`).
+3.  **Gateway Configuration:**
+    *   Go to **Commerce → System Settings → Gateways** and open your SecurePay gateway.
+    *   Ensure that a **Client ID** and **Merchant Code** are correctly configured, as the JavaScript SDK requires these to initialize.
+4.  **Template Conflict:** Make sure your checkout page HTML is valid and there are no other JavaScript errors on the page that might be preventing the SecurePay script from running.
+
+### ❌ **Issue: "Authentication errors after changing API credentials"**
+
+**Solution:**
+The plugin caches the authentication token for 24 hours. If you update your Client ID or Client Secret, the old token might still be in use.
+1.  Go to **Utilities → Caches**.
+2.  Select the "Data Caches" option.
+3.  Click "Clear caches" to flush all data caches, which will force the plugin to request a new token with the new credentials.
 
 ### ❌ **Issue: "Missing credentials" in logs**
 
 **Solution:**
-1. Go to Commerce → Gateways → Your SecurePay Gateway
+1. Go to **Commerce → System Settings → Gateways → Your SecurePay Gateway**.
 2. Fill in all required fields:
+   - Merchant Code
    - Client ID
    - Client Secret
-   - Merchant Code
-3. Save the gateway
+3. Save the gateway.
 
 ### ❌ **Issue: "Order has no outstanding balance"**
 
 **Solutions:**
-1. Ensure cart has items with price > $0
-2. Check if order is already marked as paid
-3. Verify `cart.outstandingBalance` is > 0
+1. Ensure the cart has items with a price > $0.
+2. Check if the order has already been marked as paid.
+3. Use the debug template below to verify `cart.outstandingBalance` is > 0.
 
-### ❌ **Issue: "Gateway is disabled"**
+---
 
-**Solution:**
-1. Go to Commerce → Gateways → Your SecurePay Gateway
-2. Toggle **Enabled** switch to ON
-3. Save the gateway
+## Debugging Templates & Tools
 
-### ❌ **Issue: "Parent gateway check failed"**
+### Step 1: Check Logs
 
-**Solutions:**
-1. Check if gateway handle conflicts with existing gateways
-2. Verify gateway extends `BaseGateway` correctly
-3. Check for any validation errors in gateway configuration
+Look for availability check logs in `storage/logs/web.log`:
 
-## Debug Template Code
+```bash
+# Check Craft logs for SecurePay entries
+tail -f storage/logs/web.log | grep -i securepay
+```
 
-Add this to your checkout template for detailed debugging:
+Look for messages like:
+- "SecurePay availability check for order ID: X"
+- "SecurePay unavailable: Missing credentials"
+- "SecurePay unavailable: Gateway is disabled"
+- "SecurePay payment error: ..."
+
+### Step 2: Use the Debug Template
+
+Add this to your main checkout template for detailed debugging information.
 
 ```twig
 {% if devMode %}
-<div class="debug-panel" style="background: #f8f8f8; border: 1px solid #ddd; padding: 15px; margin: 15px 0;">
+<div class="debug-panel" style="background: #f8f8f8; border: 1px solid #ddd; padding: 15px; margin: 15px 0; font-family: monospace; font-size: 12px;">
     <h3>🔍 SecurePay Debug Information</h3>
     
     {% set cart = craft.commerce.carts.cart %}
     {% set securePayGateways = [] %}
     
-    {% for gateway in craft.commerce.gateways.allCustomerEnabledGateways %}
-        {% if gateway.class == 'craft\\securepay\\gateways\\Gateway' %}
+    {% for gateway in craft.commerce.gateways.allGateways %}
+        {% if gateway.class == 'brightlabs\\securepay\\gateways\\Gateway' %}
             {% set securePayGateways = securePayGateways|merge([gateway]) %}
         {% endif %}
     {% endfor %}
     
     <h4>Order Status:</h4>
-    <ul>
+    <ul style="list-style-type: disc; padding-left: 20px;">
         <li>Order ID: {{ cart.id ?? 'No cart' }}</li>
         <li>Total: {{ cart.total|currency ?? 'N/A' }}</li>
         <li>Outstanding: {{ cart.outstandingBalance|currency ?? 'N/A' }}</li>
-        <li>Completed: {{ cart.isCompleted ? 'Yes' : 'No' }}</li>
+        <li>Is Completed: {{ cart.isCompleted ? 'Yes' : 'No' }}</li>
     </ul>
     
     <h4>SecurePay Gateways Found: {{ securePayGateways|length }}</h4>
@@ -218,8 +133,9 @@ Add this to your checkout template for detailed debugging:
         {% for gateway in securePayGateways %}
             <div style="border-left: 3px solid #007cba; padding-left: 10px; margin: 10px 0;">
                 <h5>{{ gateway.name }}</h5>
-                <ul>
+                <ul style="list-style-type: disc; padding-left: 20px;">
                     <li>Enabled: {{ gateway.enabled ? '✅ Yes' : '❌ No' }}</li>
+                    <li>Frontend Enabled: {{ gateway.isFrontendEnabled ? '✅ Yes' : '❌ No' }}</li>
                     <li>Available: {{ gateway.availableForUseWithOrder(cart) ? '✅ Yes' : '❌ No' }}</li>
                     <li>Credentials: {{ (gateway.clientId and gateway.clientSecret and gateway.merchantCode) ? '✅ Complete' : '❌ Missing' }}</li>
                     <li>Environment: {{ gateway.sandboxMode ? 'Sandbox' : 'Live' }}</li>
@@ -228,51 +144,49 @@ Add this to your checkout template for detailed debugging:
         {% endfor %}
     {% endif %}
     
-    <h4>All Available Gateways:</h4>
-    <ul>
+    <h4>All Enabled Frontend Gateways:</h4>
+    <ul style="list-style-type: disc; padding-left: 20px;">
         {% for gateway in craft.commerce.gateways.allCustomerEnabledGateways %}
-            <li>{{ gateway.name }} - {{ gateway.availableForUseWithOrder(cart) ? '✅' : '❌' }}</li>
+            <li>{{ gateway.name }} - {{ gateway.availableForUseWithOrder(cart) ? '✅ Available' : '❌ Not Available' }}</li>
         {% endfor %}
     </ul>
 </div>
 {% endif %}
 ```
 
-## Enable Debug Mode
+### Step 3: Enable Debug Mode
 
-Add to your `.env` file:
+Add to your `.env` file to see the debug panel:
 ```
 CRAFT_DEV_MODE=true
-CRAFT_ENVIRONMENT=dev
 ```
-
-## Contact Support
-
-If none of these solutions work:
-
-1. **Check Craft logs** for any PHP errors
-2. **Test with a fresh cart** (empty current cart and add items again)
-3. **Try creating a new gateway** with different credentials
-4. **Contact Brightlabs** with:
-   - Debug template output
-   - Relevant log entries
-   - Gateway configuration screenshots
 
 ## Advanced Debugging
 
-For developers, add this to the Gateway class temporarily:
+For developers, you can temporarily modify the gateway class to log more details.
+
+In `vendor/brightlabs/craft-securepay/src/gateways/Gateway.php`, you can add logging to the `availableForUseWithOrder` method:
 
 ```php
+// src/gateways/Gateway.php
+
 public function availableForUseWithOrder(Order $order): bool
 {
-    // Force availability for debugging
-    Craft::warning('SecurePay DEBUG: Forcing gateway availability', __METHOD__);
-    return true;
+    Craft::info('SecurePay availability check for order ID: ' . $order->id, __METHOD__);
+    
+    if (!$this->isFrontendEnabled) {
+        Craft::info('SecurePay unavailable: Gateway is disabled on the frontend.', __METHOD__);
+        return false;
+    }
+    
+    // ... add more logging around each check
+    
+    return parent::availableForUseWithOrder($order);
 }
 ```
 
-This will make the gateway always appear (remove after testing).
+**Important**: Remember to remove any modifications to vendor files after you are done debugging, as they will be overwritten by Composer updates.
 
 ---
 
-**Remember:** Payment gateways are configured per-gateway in Commerce settings, not at the plugin level. The plugin provides the gateway type, but each gateway instance needs individual configuration. 
+**Remember:** Payment gateways are configured per-gateway in Commerce settings, not at the plugin level. The plugin provides the gateway type, but each gateway instance needs its own individual configuration. 

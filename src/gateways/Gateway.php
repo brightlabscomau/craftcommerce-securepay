@@ -10,8 +10,6 @@ use craft\commerce\models\PaymentSource;
 use craft\commerce\models\Transaction;
 use craft\commerce\elements\Order;
 use craft\helpers\Json;
-use craft\helpers\StringHelper;
-use craft\helpers\UrlHelper;
 use brightlabs\securepay\models\SecurePayPaymentForm;
 use brightlabs\securepay\responses\PaymentResponse;
 use craft\web\Response as WebResponse;
@@ -54,32 +52,6 @@ class Gateway extends BaseGateway
      * @var bool
      */
     public bool $sandboxMode = true;
-
-    /**
-     * @var bool
-     */
-    public bool $fraudDetection = false;
-
-    /**
-     * @var bool
-     */
-    public bool $threeDSecure = false;
-
-    /**
-     * @var bool
-     */
-    public bool $applePay = false;
-
-    /**
-     * @var bool
-     */
-    public bool $dynamicCurrencyConversion = false;
-
-
-    /**
-     * @var string Fraud detection provider (fraudguard or aci)
-     */
-    public string $fraudProvider = 'fraudguard';
 
     /**
      * @var string Background color for JS SDK
@@ -127,16 +99,6 @@ class Gateway extends BaseGateway
     public bool $showCardIcons = true;
 
     /**
-     * @var bool Show PayPal payments
-     */
-    public bool $paypalPayments = false;
-
-    /**
-     * @var bool Show direct entry payments
-     */
-    public bool $directEntryPayments = false;
-
-    /**
      * @var bool Show card payments
      */
     public bool $cardPayments = true;
@@ -163,10 +125,6 @@ class Gateway extends BaseGateway
      */
     private ?string $cardScheme = null;
 
-    /**
-     * @var string|null SecurePay Order ID
-     */
-    private ?string $securePayOrderId = null;
     // Public Methods
     // =========================================================================
 
@@ -241,10 +199,6 @@ class Gateway extends BaseGateway
             'baseUrl' => $baseUrl,
             'clientId' => $this->clientId,
             'merchantCode' => $this->merchantCode,
-            'threeDSecure' => $this->threeDSecure,
-            'fraudDetection' => $this->fraudDetection,
-            'applePay' => $this->applePay,
-            'dynamicCurrencyConversion' => $this->dynamicCurrencyConversion,
         ];
 
         $js = "
@@ -367,7 +321,7 @@ class Gateway extends BaseGateway
     public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
 
-        return $this->createPayment($transaction, $form, false);
+        return new PaymentResponse(['error' => 'Authorize not supported']);
     }
 
     /**
@@ -375,19 +329,8 @@ class Gateway extends BaseGateway
      */
     public function capture(Transaction $transaction, string $reference): RequestResponseInterface
     {
-        try {
-            $captureData = [
-                'amount' => $this->convertAmount($transaction->paymentAmount),
-                'currency' => $transaction->paymentCurrency,
-            ];
+        return new PaymentResponse(['error' => 'Capture not supported']);
 
-            $response = $this->sendRequest('POST', '/v2/payments/preauth/' . $reference . '/capture', $captureData);
-            
-            return new PaymentResponse($response);
-        } catch (\Exception $e) {
-            Craft::error('SecurePay capture error: ' . $e->getMessage(), __METHOD__);
-            return new PaymentResponse(['error' => $e->getMessage()]);
-        }
     }
       /**
      * @inheritdoc
@@ -401,20 +344,7 @@ class Gateway extends BaseGateway
      */
     public function refund(Transaction $transaction): RequestResponseInterface
     {
-        try {
-            $refundData = [
-                'amount' => $this->convertAmount($transaction->paymentAmount),
-                'currency' => $transaction->paymentCurrency,
-                'reason' => 'Refund requested',
-            ];
-
-            $response = $this->sendRequest('POST', '/v2/payments/' . $transaction->reference . '/refund', $refundData);
-            
-            return new PaymentResponse($response);
-        } catch (\Exception $e) {
-            Craft::error('SecurePay refund error: ' . $e->getMessage(), __METHOD__);
-            return new PaymentResponse(['error' => $e->getMessage()]);
-        }
+        return new PaymentResponse(['error' => 'Refund not supported']);
     }
     /**
      * @inheritdoc
@@ -576,7 +506,7 @@ class Gateway extends BaseGateway
     {
         return [
             'purchase' => Craft::t('commerce', 'Purchase (Immediate Capture)'),
-            'authorize' => Craft::t('commerce', 'Authorize (Capture Later)'),
+            //'authorize' => Craft::t('commerce', 'Authorize (Capture Later)'),
         ];
     }
 
@@ -590,11 +520,6 @@ class Gateway extends BaseGateway
             'clientSecret' => 'Client Secret', 
             'merchantCode' => 'Merchant Code',
             'sandboxMode' => 'Sandbox Mode',
-            'fraudDetection' => 'Fraud Detection',
-            'threeDSecure' => '3D Secure',
-            'applePay' => 'Apple Pay',
-            'dynamicCurrencyConversion' => 'Dynamic Currency Conversion',
-            'fraudProvider' => 'Fraud Detection Provider',
             'backgroundColor' => 'Background Color',
             'labelFontFamily' => 'Label Font Family',
             'labelFontSize' => 'Label Font Size',
@@ -604,8 +529,6 @@ class Gateway extends BaseGateway
             'inputFontColor' => 'Input Font Color',
             'allowedCardTypes' => 'Allowed Card Types',
             'showCardIcons' => 'Show Card Icons',
-            'paypalPayments' => 'PayPal Payments',
-            'directEntryPayments' => 'Direct Entry Payments',
             'cardPayments' => 'Card Payments',
         ];
     }
@@ -617,9 +540,8 @@ class Gateway extends BaseGateway
     {
         $rules = parent::rules();
         $rules[] = [['clientId', 'clientSecret', 'merchantCode'], 'required'];
-        $rules[] = [['clientId', 'clientSecret', 'merchantCode', 'fraudProvider', 'paymentType', 'backgroundColor', 'labelFontFamily', 'labelFontSize', 'labelFontColor', 'inputFontFamily', 'inputFontSize', 'inputFontColor'], 'string'];
-        $rules[] = [['sandboxMode', 'fraudDetection', 'threeDSecure', 'applePay', 'dynamicCurrencyConversion', 'showCardIcons', 'paypalPayments', 'directEntryPayments', 'cardPayments'], 'boolean'];
-        $rules[] = [['fraudProvider'], 'in', 'range' => ['fraudguard', 'aci']];
+        $rules[] = [['clientId', 'clientSecret', 'merchantCode', 'paymentType', 'backgroundColor', 'labelFontFamily', 'labelFontSize', 'labelFontColor', 'inputFontFamily', 'inputFontSize', 'inputFontColor'], 'string'];
+        $rules[] = [['sandboxMode', 'showCardIcons', 'cardPayments'], 'boolean'];
         $rules[] = [['paymentType'], 'in', 'range' => ['purchase', 'authorize']];
         $rules[] = [['allowedCardTypes'], 'each', 'rule' => ['in', 'range' => ['visa', 'mastercard', 'amex', 'diners']]];
 
@@ -688,33 +610,7 @@ class Gateway extends BaseGateway
             if($order->customerId && 0){
                 $paymentData['customerCode'] = (string) $order->customerId.""; // --> can cause INVALID_ORDER_ID
             }
-            // For DCC
-            if ($this->dynamicCurrencyConversion && $this->securePayOrderId) {
-                $paymentData['dccDetails'] = ['initiatedOrderId' => $this->securePayOrderId];
-            }
-            if ($this->fraudDetection && $this->fraudProvider == 'fraudguard') {
-                $paymentData['fraudCheckDetails'] = [
-                    // 'providerReferenceNumber' => '',
-                    'fraudCheckType' => 'FRAUD_GUARD',
-                ];
-                $paymentData['fraudCheckDetails']['customerDetails'] = [
-                'emailAddress' => $order->email,
-                ];
-                $paymentData['fraudCheckDetails']['shippingAddress'] = [
-                'firstName' => $order->shippingAddress->firstName ?: $order->billingAddress->firstName,
-                'lastName' => $order->shippingAddress->lastName ?: $order->billingAddress->lastName,
-                'city' => $order->shippingAddress->city ?: $order->billingAddress->city,
-                'postcode' => $order->shippingAddress->zipCode ?: $order->billingAddress->zipCode,
-                'countryCode' => $order->shippingAddress->countryCode ?: $order->billingAddress->countryCode,
-                ];
-                $paymentData['fraudCheckDetails']['billingAddress'] = [
-                'countryCode' => $order->billingAddress->countryCode,
-                ];
-            }
-            if ($this->threeDSecure) {
-                $orderId = $this->securePayOrderId;
-                $paymentData['threedSecureDetails'] = ['initiatedOrderId' => $orderId];
-            }
+
             // Prepare payment data according to SecurePay API documentation
             $createPaymentRequest = new CreatePaymentRequest($this->credential->isLive(),	$this->credential, $paymentData);
             

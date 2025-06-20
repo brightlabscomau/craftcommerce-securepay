@@ -177,45 +177,6 @@
 
 <div class="field">
     <div class="heading">
-        <h2>{{ 'Security Features'|t('commerce') }}</h2>
-    </div>
-    <div class="instructions">
-        <p>{{ 'Configure additional security features provided by SecurePay.'|t('commerce') }}</p>
-    </div>
-</div>
-
-{{ forms.lightswitchField({
-    label: '3D Secure 2.0'|t('commerce'),
-    id: 'threeDSecure',
-    name: 'threeDSecure',
-    on: gateway.threeDSecure,
-    instructions: 'Enable 3D Secure 2.0 authentication for enhanced security. Requires 3DS to be enabled on your SecurePay account.'|t('commerce'),
-}) }}
-
-{{ forms.lightswitchField({
-    label: 'Fraud Detection'|t('commerce'),
-    id: 'fraudDetection',
-    name: 'fraudDetection',
-    on: gateway.fraudDetection,
-    instructions: 'Enable fraud detection for transactions. Requires fraud detection to be enabled on your SecurePay account.'|t('commerce'),
-}) }}
-
-{{ forms.selectField({
-    label: 'Fraud Detection Provider'|t('commerce'),
-    id: 'fraudProvider',
-    name: 'fraudProvider',
-    value: gateway.fraudProvider,
-    options: [
-        { label: 'FraudGuard', value: 'fraudguard' },
-        { label: 'ACI ReD Shield', value: 'aci' }
-    ],
-    instructions: 'Select the fraud detection provider. FraudGuard is the default, ACI ReD Shield requires additional setup.'|t('commerce'),
-}) }}
-
-<hr>
-
-<div class="field">
-    <div class="heading">
         <h2>{{ 'Payment Features'|t('commerce') }}</h2>
     </div>
     <div class="instructions">
@@ -231,55 +192,6 @@
     instructions: 'Enable credit and debit card payments. This is the standard payment method for most transactions.'|t('commerce'),
 }) }}
 
-{{ forms.lightswitchField({
-    label: 'PayPal Payments'|t('commerce'),
-    id: 'paypalPayments',
-    name: 'paypalPayments',
-    on: gateway.paypalPayments,
-    instructions: 'Enable PayPal as a payment option through SecurePay. Requires PayPal to be configured on your SecurePay account.'|t('commerce'),
-}) }}
-
-{{ forms.lightswitchField({
-    label: 'Apple Pay'|t('commerce'),
-    id: 'applePay',
-    name: 'applePay',
-    on: gateway.applePay,
-    instructions: 'Enable Apple Pay payments. Requires domain verification and proper Apple Pay merchant setup.'|t('commerce'),
-}) }}
-
-{{ forms.lightswitchField({
-    label: 'Direct Entry Payments'|t('commerce'),
-    id: 'directEntryPayments',
-    name: 'directEntryPayments',
-    on: gateway.directEntryPayments,
-    instructions: 'Enable direct entry payments for bank transfers and direct debits. Requires direct entry to be enabled on your SecurePay account.'|t('commerce'),
-}) }}
-
-{{ forms.lightswitchField({
-    label: 'Dynamic Currency Conversion'|t('commerce'),
-    id: 'dynamicCurrencyConversion',
-    name: 'dynamicCurrencyConversion',
-    on: gateway.dynamicCurrencyConversion,
-    instructions: 'Enable Dynamic Currency Conversion to allow customers to pay in their local currency.'|t('commerce'),
-}) }}
-
-<hr>
-
-<div class="field">
-    <div class="heading">
-        <h2>{{ 'Webhook Information'|t('commerce') }}</h2>
-    </div>
-    <div class="instructions">
-        <p>{{ 'Configure this webhook URL in your SecurePay merchant portal for real-time transaction updates.'|t('commerce') }}</p>
-        {% if gateway.id %}
-            <p><strong>{{ 'Webhook URL:'|t('commerce') }}</strong></p>
-            <code>{{ siteUrl }}actions/commerce/webhooks/process-webhook?gateway={{ gateway.id }}</code>
-        {% else %}
-            <p><em>{{ 'Webhook URL will be available after saving the gateway.'|t('commerce') }}</em></p>
-        {% endif %}
-    </div>
-</div>
-
 <hr>
 
 <div class="field">
@@ -290,9 +202,8 @@
         <p>{{ 'This gateway integrates with SecurePay API v2 following the official documentation patterns.'|t('commerce') }}</p>
         <ul>
             <li>{{ 'API Documentation: '|t('commerce') }}<a href="https://auspost.com.au/payments/docs/securepay/" target="_blank">SecurePay API Docs</a></li>
-            <li>{{ 'Support: '|t('commerce') }}<a href="mailto:support@securepay.com.au">support@securepay.com.au</a></li>
-            <li>{{ 'Test Cards: Visa 4111111111111111, Mastercard 5555555555554444'|t('commerce') }}</li>
             <li>{{ 'Craft Commerce Integration: '|t('commerce') }}<a href="https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html" target="_blank">Payment Gateway Types</a></li>
+            <li>{{ 'Test Cards: Visa 4111111111111111 OR 4242424242424242, Mastercard 5555555555554444, American Express 378282246310005' |t('commerce') }}</li>
         </ul>
     </div>
 </div> 

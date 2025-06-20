@@ -1,81 +1,79 @@
 # SecurePay Integration Guide for Craft Commerce
 
-This guide provides comprehensive instructions for integrating SecurePay payment gateway with Craft Commerce, following the [official SecurePay API documentation](https://auspost.com.au/payments/docs/securepay/?javascript#integrating-with-securepay).
+This guide provides comprehensive instructions for integrating the SecurePay payment gateway with Craft Commerce, following the [official SecurePay API documentation](https://auspost.com.au/payments/docs/securepay/?javascript#integrating-with-securepay).
 
-**Plugin**: `craftcms/craft-securepay` v1.0.0  
+**Plugin**: `brightlabs/craft-securepay` v1.0.0  
 **Developer**: [Brightlabs](https://brightlabs.com.au/)  
 **API**: SecurePay API v2 with OAuth 2.0
 
 ## Overview
 
-This plugin implements the SecurePay API v2 with the following integration methods:
-
-1. **JavaScript SDK Integration** (Recommended) - For enhanced security and PCI compliance
-2. **Direct API Integration** - Traditional server-to-server card processing
-3. **3D Secure 2.0** - Enhanced authentication with challenge flows
-4. **Fraud Detection** - FraudGuard (default) and ACI ReD Shield support
-5. **Apple Pay** - Native Apple Pay integration with domain verification
-6. **Dynamic Currency Conversion** - Multi-currency support with real-time rates
-7. **Webhook Integration** - Real-time payment status updates
+This plugin implements the SecurePay API v2 using the **JavaScript SDK Integration** for enhanced security and PCI compliance. It tokenizes card data on the client-side, ensuring that no sensitive payment information ever touches your server.
 
 ## Integration Architecture
 
 ```
-Frontend (JavaScript SDK) ←→ SecurePay Servers
+Frontend (JavaScript SDK) ←→ SecurePay Servers (Tokenization)
+         ↓ (Token)
+   Craft Commerce ←→ SecurePay API v2 (REST API Payment)
          ↓
-   Craft Commerce ←→ SecurePay API v2 (REST)
-         ↓
-   Backend Processing
+   Backend Processing (Order Completion)
 ```
 
 ## 1. JavaScript SDK Integration
 
 ### Overview
-The JavaScript SDK integration follows the SecurePay official documentation for secure client-side tokenization.
+The JavaScript SDK integration follows the SecurePay official documentation for secure client-side tokenization. The plugin handles the entire process automatically.
 
 ### Features
-- **PCI Compliance**: Card data never touches your server
+- **PCI Compliance**: Card data is tokenized and never touches your server
 - **Enhanced Security**: Client-side tokenization
-- **3D Secure 2.0**: Built-in authentication flows
-- **Apple Pay**: Native integration
-- **Real-time Validation**: Instant card validation
+- **Real-time Validation**: The SDK provides instant card validation in the browser
+- **Customizable UI**: The payment form can be styled from the gateway settings in the Craft CP
 
 ### Implementation
 
 #### 1.1 SDK Loading
+The plugin automatically loads the correct SDK script (sandbox or live) based on your gateway settings.
+
 ```javascript
-// The plugin automatically loads the SDK
+// Sandbox SDK URL
 <script src="https://payments-stest.npe.auspost.zone/v2/ui/securepay.min.js"></script>
+
+// Live SDK URL
+<script src="https://payments.auspost.net.au/v2/ui/securepay.min.js"></script>
 ```
 
 #### 1.2 Configuration
+The plugin handles the configuration of the JavaScript SDK automatically using the settings you provide in the Craft Commerce gateway settings.
+
 ```javascript
+// This configuration is handled by the plugin in the background
 const securePayConfig = {
-    clientId: 'your-client-id',
-    merchantCode: 'your-merchant-code',
-    baseUrl: 'https://payments-stest.npe.auspost.zone', // Sandbox
-    threeDSecure: {
-        enabled: true,
-        challengeIndicator: '01'
-    },
-    fraud: {
-        enabled: true,
-        provider: 'fraudguard'
+    clientId: 'your-client-id-from-settings',
+    merchantCode: 'your-merchant-code-from-settings',
+    baseUrl: 'https://payments-stest.npe.auspost.zone', // Set by sandbox mode toggle
+    style: {
+        // All styling options are configured in gateway settings
+        backgroundColor: '#ffffff',
+        labelFontColor: '#000080',
+        // ... and many more
     }
 };
 ```
 
 #### 1.3 Payment Flow
-1. Customer enters payment details in secure form
-2. JavaScript SDK tokenizes card data client-side
-3. Form submits token to Craft Commerce
-4. Gateway processes payment with SecurePay API using token
-5. Handle response (success, 3DS challenge, or error)
-6. Commerce completes order or handles redirect
+1. Customer enters payment details into the secure form rendered by the plugin.
+2. The JavaScript SDK tokenizes the card data on the client-side upon form submission.
+3. The plugin's JavaScript submits the generated token to Craft Commerce.
+4. The gateway processes the payment with the SecurePay API using the token.
+5. SecurePay returns a response (success or error).
+6. Commerce completes the order or displays an error message.
 
 #### 1.4 Craft Commerce Integration
+You only need to output the payment form in your checkout template. The plugin handles the rest.
+
 ```twig
-{# The plugin automatically renders the payment form #}
 {# In your checkout template: #}
 
 {% set cart = craft.commerce.carts.cart %}
@@ -86,7 +84,7 @@ const securePayConfig = {
     {{ actionInput('commerce/payments/pay') }}
     {{ hiddenInput('gatewayId', gateway.id) }}
     
-    {# Gateway renders appropriate form based on settings #}
+    {# The gateway renders the complete payment form with JS #}
     {{ gateway.getPaymentFormHtml()|raw }}
     
     <button type="submit">Complete Payment</button>
@@ -96,9 +94,10 @@ const securePayConfig = {
 ## 2. REST API Integration
 
 ### Authentication
-The plugin uses OAuth 2.0 Client Credentials flow:
+The plugin uses the OAuth 2.0 Client Credentials flow and automatically caches the access token for 24 hours to improve performance.
 
 ```php
+// Authentication is handled automatically by the plugin
 POST https://welcome.api2.sandbox.auspost.com.au/oauth/token
 Authorization: Basic base64(clientId:clientSecret)
 Content-Type: application/x-www-form-urlencoded
@@ -107,168 +106,24 @@ grant_type=client_credentials&audience=https://api.payments.auspost.com.au
 ```
 
 ### Payment Creation
+The plugin creates a payment on the backend using the token generated by the JavaScript SDK. **Raw card data is never sent from the server.**
+
 ```php
+// This request is made by the plugin on the server-side
 POST https://payments-stest.npe.auspost.zone/v2/payments
 Authorization: Bearer {access_token}
 Content-Type: application/json
 
 {
-    "merchant": {
-        "code": "your-merchant-code"
-    },
-    "customer": {
-        "customerNumber": "customer-123",
-        "firstName": "John",
-        "lastName": "Doe",
-        "email": "john@example.com"
-    },
-    "transaction": {
-        "reference": "order-123",
-        "amount": 2500, // $25.00 in cents
-        "currency": "AUD",
-        "capture": true
-    },
-    "payment": {
-        "card": {
-            "number": "4111111111111111",
-            "expiryMonth": "12",
-            "expiryYear": "2025",
-            "cvv": "123",
-            "cardHolderName": "John Doe"
-        }
-    }
+    "merchantCode": "your-merchant-code",
+    "token": "tok_123abc_generated_by_js_sdk",
+    "ip": "123.123.123.123",
+    "amount": 2500, // $25.00 in cents
+    "currency": "AUD",
+    "orderId": "12345"
 }
 ```
 
-## 3. Security Features
-
-### 3.1 3D Secure 2.0
-Enhanced authentication following EMV 3DS specification:
-
-```json
-{
-    "threeDSecure": {
-        "enabled": true,
-        "challengeIndicator": "01",
-        "requestorChallengeInd": "01"
-    }
-}
-```
-
-**Challenge Indicators:**
-- `01` - No preference
-- `02` - No challenge requested
-- `03` - Challenge requested (3DS Requestor preference)
-- `04` - Challenge requested (Mandate)
-
-### 3.2 Fraud Detection
-
-#### FraudGuard (Default)
-```json
-{
-    "fraud": {
-        "enabled": true,
-        "provider": "fraudguard"
-    }
-}
-```
-
-#### ACI ReD Shield
-```json
-{
-    "fraud": {
-        "enabled": true,
-        "provider": "aci",
-        "deviceData": "collected-device-fingerprint"
-    }
-}
-```
-
-## 4. Apple Pay Integration
-
-### Prerequisites
-1. Apple Developer Account
-2. Merchant ID registration
-3. Domain verification file
-4. Processing certificate
-
-### Domain Verification
-1. Download domain verification file from SecurePay portal
-2. Upload to `/.well-known/apple-developer-merchantid-domain-association`
-3. Ensure file is accessible via HTTPS
-
-### JavaScript Implementation
-```javascript
-if (window.securePayInstance.canMakeApplePayPayments()) {
-    // Show Apple Pay button
-    document.getElementById('apple-pay-button').style.display = 'block';
-    
-    // Handle Apple Pay payment
-    applePayButton.addEventListener('click', function() {
-        const paymentRequest = {
-            countryCode: 'AU',
-            currencyCode: 'AUD',
-            total: {
-                label: 'Your Store',
-                amount: '25.00'
-            }
-        };
-        
-        window.securePayInstance.processApplePayPayment(paymentRequest);
-    });
-}
-```
-
-## 5. Dynamic Currency Conversion (DCC)
-
-### Overview
-Allows customers to pay in their local currency with real-time exchange rates.
-
-### Implementation
-```json
-{
-    "dcc": {
-        "enabled": true
-    }
-}
-```
-
-### Response Handling
-```javascript
-// DCC quote received
-function handleDccQuote(quote) {
-    if (quote.rates && quote.rates.length > 0) {
-        // Display currency options to customer
-        quote.rates.forEach(rate => {
-            console.log(`Pay ${rate.convertedAmount} ${rate.currency}`);
-            console.log(`Exchange rate: ${rate.exchangeRate}`);
-            console.log(`Fee: ${rate.fee}`);
-        });
-    }
-}
-```
-
-## 6. Error Handling
-
-### Common Error Codes
-- `E001` - Invalid card number
-- `E002` - Card expired
-- `E003` - Insufficient funds
-- `E004` - Card declined
-- `E005` - Invalid CVV
-- `3DS001` - 3D Secure authentication failed
-- `FRAUD001` - Transaction flagged by fraud detection
-
-### Error Response Format
-```json
-{
-    "error": {
-        "code": "E001",
-        "message": "Invalid card number",
-        "field": "card.number"
-    }
-}
-```
 
 ## 7. Testing
 
@@ -283,14 +138,12 @@ function handleDccQuote(quote) {
 - **Mastercard**: `5555555555554444`
 - **Amex**: `378282246310005`
 
-#### 3D Secure Test Cards
-- **Visa (Challenge)**: `4000000000001091`
-- **Mastercard (Frictionless)**: `5200000000001096`
-
 #### Error Testing Cards
 - **Declined**: `4000000000000002`
 - **Insufficient Funds**: `4000000000009995`
 - **Expired Card**: `4000000000000069`
+
+**Note**: 3D Secure and other advanced features are not yet implemented in this version of the plugin.
 
 ### Test Data
 - **Expiry**: Any future date (e.g., `12/2025`)
@@ -300,34 +153,32 @@ function handleDccQuote(quote) {
 ## 8. Production Deployment
 
 ### Checklist
-1. ✅ Obtain live API credentials from SecurePay
-2. ✅ Update base URLs to production endpoints
-3. ✅ Disable sandbox mode
-4. ✅ Configure SSL/TLS certificates
-5. ✅ Set up domain verification for Apple Pay
-6. ✅ Configure fraud detection rules
-7. ✅ Test with small transactions
-8. ✅ Monitor transaction logs
+1. ✅ Obtain live API credentials from SecurePay.
+2. ✅ Create a new SecurePay gateway configuration in Craft Commerce with the live credentials.
+3. ✅ Disable "Sandbox Mode" in the gateway settings. The plugin will automatically use production URLs.
+4. ✅ Ensure your website has a valid SSL/TLS certificate (HTTPS is required).
+5. ✅ Test the live gateway with small transactions.
+6. ✅ Monitor transaction logs in the Craft Commerce control panel.
 
 ### Production URLs
+The plugin automatically switches to these URLs when "Sandbox Mode" is disabled:
 - **API Base URL**: `https://payments.auspost.net.au`
 - **OAuth URL**: `https://welcome.api2.auspost.com.au/oauth/token`
 
 ## 9. Monitoring and Logging
 
 ### Transaction Monitoring
-- Monitor success/failure rates
-- Track 3D Secure authentication rates
-- Review fraud detection decisions
-- Analyze payment method usage
+- Monitor success/failure rates in the Craft Commerce control panel under `Commerce > Transactions`.
+- Review transaction details for any error messages returned by SecurePay.
 
 ### Logging Best Practices
+The plugin logs important events and errors. You can find these logs in your `storage/logs` directory.
 ```php
-// Log successful payments
-Craft::info('SecurePay payment successful: ' . $transactionReference, __METHOD__);
+// Example of an info log from the plugin
+Craft::info('CreatePaymentResponse Response: {"status":"paid", ...}', __METHOD__);
 
-// Log errors (don't log sensitive data)
-Craft::error('SecurePay payment failed: ' . $errorMessage, __METHOD__);
+// Example of an error log from the plugin
+Craft::error('SecurePay payment error: Invalid token', __METHOD__);
 ```
 
 ## 10. Support and Resources
@@ -335,55 +186,43 @@ Craft::error('SecurePay payment failed: ' . $errorMessage, __METHOD__);
 ### Official Documentation
 - [SecurePay API Documentation](https://auspost.com.au/payments/docs/securepay/)
 - [JavaScript SDK Reference](https://auspost.com.au/payments/docs/securepay/?javascript#javascript-sdk)
-- [3D Secure 2 Guide](https://auspost.com.au/payments/docs/securepay/?javascript#3d-secure-2)
 
 ### Support Channels
-- **Email**: support@securepay.com.au
-- **Phone**: Available in merchant portal
-- **API Status**: `GET /v2/health`
+- For issues with the plugin itself, please open an issue on the [GitHub repository](https://github.com/brightlabs/craft-securepay/issues).
+- For issues with your SecurePay account or the API service, contact SecurePay support.
 
 ### Troubleshooting
 
 #### Common Issues
 1. **Authentication Failed**
-   - Verify client ID and secret
-   - Check token expiration
-   - Ensure correct environment URLs
+   - Double-check that your Merchant Code, Client ID, and Client Secret are correct in the gateway settings.
+   - Ensure you are using the correct environment (Sandbox/Live) that matches your credentials.
+   - Check for firewall or network issues blocking requests to SecurePay's API.
 
-2. **3D Secure Failures**
-   - Verify 3DS is enabled on account
-   - Check browser compatibility
-   - Test with 3DS test cards
+2. **Payment Form Not Appearing**
+   - Ensure the gateway is enabled and available for the current cart/order.
+   - Check your browser's developer console for any JavaScript errors.
+   - Verify that your Twig template is correctly calling `gateway.getPaymentFormHtml()`.
 
-3. **Apple Pay Issues**
-   - Verify domain verification file
-   - Check merchant ID configuration
-   - Ensure HTTPS on all pages
-
-4. **Fraud Detection**
-   - Review fraud rules configuration
-   - Check device fingerprinting
-   - Verify customer data completeness
+3. **Transactions Failing**
+   - Check the transaction details in Craft Commerce for specific error messages from SecurePay.
+   - Ensure the currency being used is supported by your SecurePay account (currently hardcoded to AUD).
+   - Test with valid test card numbers to rule out card-specific issues.
 
 ## 11. Security Best Practices
 
 ### PCI Compliance
-- Use JavaScript SDK for card tokenization
-- Never store card data on your servers
-- Implement proper access controls
-- Regular security audits
+- The plugin is designed for PCI compliance by using the SecurePay JavaScript SDK.
+- **Never** modify the plugin to send raw card data from your server.
+- Ensure your server environment follows security best practices (e.g., file permissions, access controls).
 
 ### API Security
-- Protect API credentials
-- Use environment variables for sensitive data
-- Implement request signing where available
-- Monitor for suspicious activity
+- Protect your API credentials. Do not hardcode them in your templates or commit them to version control.
+- Use Craft's environment variables (`.env` file) to store sensitive credentials and reference them in your gateway settings.
 
 ### Client-Side Security
-- Validate all inputs
-- Use HTTPS everywhere
-- Implement CSP headers
-- Regular dependency updates
+- Always serve your checkout pages over HTTPS.
+- Consider implementing Content Security Policy (CSP) headers to restrict script sources.
 
 ---
 
