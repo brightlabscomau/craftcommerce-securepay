@@ -23,61 +23,27 @@ class SecurePayPaymentForm extends BasePaymentForm
     /**
      * @var string|null Payment method type (card, apple-pay, etc.)
      */
-    public ?string $paymentMethod = null;
+    public ?string $createdAt = null;
 
     /**
      * @var array|null DCC selection data
      */
-    public ?array $dccSelection = null;
+    public ?string $scheme = null;
 
-    /**
-     * @var string|null Device fingerprint for fraud detection
-     */
-    public ?string $deviceFingerprint = null;
-
+    
     /**
      * @inheritdoc
      */
-    public function rules(): array
+    protected function defineRules(): array
     {
-        $rules = parent::rules();
-
-        // If we have a token from the JavaScript SDK, we don't need traditional card validation
-        if ($this->token) {
-            // Remove required validation for card fields when using token
-            $requiredRules = array_filter($rules, function($rule) {
-                return !(is_array($rule) && isset($rule[1]) && $rule[1] === 'required');
-            });
-            
-            // Add token validation
-            $requiredRules[] = [['token'], 'required'];
-            $requiredRules[] = [['token'], 'string'];
-            
-            return $requiredRules;
-        }
-
-        // Traditional validation for direct card entry
-        $rules[] = [['paymentMethod'], 'string'];
-        $rules[] = [['deviceFingerprint'], 'string'];
-        $rules[] = [['dccSelection'], 'safe'];
+        $rules = parent::defineRules();
+        $rules[] = [['token','createdAt','scheme'], 'required'];
 
         return $rules;
     }
-
     /**
      * @inheritdoc
      */
-    public function attributeLabels(): array
-    {
-        $labels = parent::attributeLabels();
-        
-        $labels['token'] = 'Payment Token';
-        $labels['paymentMethod'] = 'Payment Method';
-        $labels['dccSelection'] = 'Currency Selection';
-        $labels['deviceFingerprint'] = 'Device Fingerprint';
-
-        return $labels;
-    }
 
     /**
      * Check if this is a tokenized payment
@@ -111,32 +77,4 @@ class SecurePayPaymentForm extends BasePaymentForm
         return 'Credit Card (Direct)';
     }
 
-    /**
-     * Populate from request data following Commerce patterns
-     */
-    public function populateFromData(array $data): void
-    {
-        // Handle standard form population
-        foreach ($data as $key => $value) {
-            if (property_exists($this, $key)) {
-                $this->$key = $value;
-            }
-        }
-
-        // Handle special cases for JavaScript SDK data
-        if (isset($data['paymentToken'])) {
-            $this->token = $data['paymentToken'];
-        }
-
-        if (isset($data['paymentMethod'])) {
-            $this->paymentMethod = $data['paymentMethod'];
-        }
-
-        if (isset($data['dcc-selection'])) {
-            $this->dccSelection = [
-                'currency' => $data['dcc-selection'],
-                'accepted' => true,
-            ];
-        }
-    }
 } 

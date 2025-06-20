@@ -10,6 +10,8 @@ use craft\commerce\base\RequestResponseInterface;
  * @author Brightlabs
  * @since 1.0
  */
+// successfull data respond
+ // Array ( [createdAt] => 2025-06-20T03:43:21.588919675Z [amount] => 86800 [currency] => AUD [status] => paid [bankTransactionId] => 664437 [gatewayResponseCode] => 00 [gatewayResponseMessage] => Transaction successful [customerCode] => anonymous [merchantCode] => 5AR0055 [ip] => 192.168.97.1 [token] => 1738992071975167 [orderId] => 940992 )
 class PaymentResponse implements RequestResponseInterface
 {
     /**
@@ -30,65 +32,27 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function isSuccessful(): bool
     {
-        if (isset($this->data['error'])) {
-            return false;
-        }
-
         // SecurePay API v2 response patterns
-        if (isset($this->data['status'])) {
-            return in_array(strtolower($this->data['status']), [
-                'approved', 
-                'captured', 
-                'refunded', 
-                'success',
-                'completed'
-            ]);
-        }
-
-        // Check for transaction status
-        if (isset($this->data['transaction']['status'])) {
-            return in_array(strtolower($this->data['transaction']['status']), [
-                'approved', 
-                'captured', 
-                'refunded', 
-                'success',
-                'completed'
-            ]);
-        }
-
-        // Check for payment status
-        if (isset($this->data['payment']['status'])) {
-            return in_array(strtolower($this->data['payment']['status']), [
-                'approved', 
-                'captured', 
-                'refunded', 
-                'success',
-                'completed'
-            ]);
-        }
-
-        // Check response code
-        if (isset($this->data['responseCode'])) {
-            return in_array($this->data['responseCode'], ['00', '000', 'approved']);
+        if (!isset($this->data['error']) && isset($this->data['status'])) {
+            return $this->data['status'] === 'paid';
         }
 
         return false;
     }
-
+    /**
+     * @inheritdoc
+     */
+    public function isProcessing(): bool
+    {
+        return true;
+    }
     /**
      * @inheritdoc
      */
     public function isRedirect(): bool
     {
-        // Check for 3D Secure redirect
-        if (isset($this->data['threeDSecure']['redirectRequired']) && $this->data['threeDSecure']['redirectRequired']) {
-            return true;
-        }
-
         // Check for general redirect
-        return isset($this->data['redirect_url']) || 
-               isset($this->data['redirectUrl']) ||
-               isset($this->data['threeDSecure']['redirectUrl']);
+        return false;
     }
 
     /**
@@ -96,7 +60,7 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function getRedirectMethod(): string
     {
-        return $this->data['redirectMethod'] ?? 'GET';
+        return '';
     }
 
     /**
@@ -104,11 +68,7 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function getRedirectData(): array
     {
-        if (isset($this->data['threeDSecure']['redirectData'])) {
-            return $this->data['threeDSecure']['redirectData'];
-        }
-
-        return $this->data['redirectData'] ?? [];
+        return [];
     }
 
     /**
@@ -116,15 +76,8 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function getRedirectUrl(): string
     {
-        // 3D Secure redirect URL
-        if (isset($this->data['threeDSecure']['redirectUrl'])) {
-            return $this->data['threeDSecure']['redirectUrl'];
-        }
-
         // General redirect URLs
-        return $this->data['redirect_url'] ?? 
-               $this->data['redirectUrl'] ?? 
-               '';
+        return '';
     }
 
     /**
@@ -132,14 +85,12 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function getTransactionReference(): string
     {
+        $reference = '';
         // Try multiple possible reference fields
-        return $this->data['txnReference'] ?? 
-               $this->data['reference'] ?? 
-               $this->data['transactionReference'] ??
-               $this->data['transaction']['reference'] ??
-               $this->data['payment']['reference'] ??
-               $this->data['id'] ??
-               '';
+        if(isset($this->data['bankTransactionId'])){
+            $reference = $this->data['bankTransactionId'];
+        }
+        return $reference;
     }
 
     /**
@@ -147,11 +98,20 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function getCode(): string
     {
-        return $this->data['responseCode'] ?? 
-               $this->data['code'] ?? 
-               $this->data['transaction']['responseCode'] ??
-               $this->data['payment']['responseCode'] ??
-               '';
+        $code = '';
+        if (isset($this->data['errors'])) {
+            if(is_array($this->data['errors'])){
+                $code = [];
+                foreach($this->data['errors'] as $error){
+                    $code[] = $error['code'];
+                }
+                $code = implode(', ', $code);
+            }
+        }
+        elseif(isset($this->data['gatewayResponseCode'])){
+            $code = $this->data['gatewayResponseCode'];
+        }
+        return $code;
     }
 
     /**
@@ -167,23 +127,20 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function getMessage(): string
     {
-        if (isset($this->data['error'])) {
-            if (is_array($this->data['error'])) {
-                return $this->data['error']['message'] ?? 
-                       $this->data['error']['description'] ?? 
-                       'Payment error occurred';
+        $message = '';
+        if (isset($this->data['errors'])) {
+            if(is_array($this->data['errors'])){
+                $message = [];
+                foreach($this->data['errors'] as $error){
+                    $message[] = $error['detail'];
+                }
+                $message = implode(', ', $message);
             }
-            return $this->data['error'];
         }
-
-        // Try multiple possible message fields
-        return $this->data['responseText'] ?? 
-               $this->data['message'] ?? 
-               $this->data['description'] ??
-               $this->data['transaction']['responseText'] ??
-               $this->data['payment']['responseText'] ??
-               $this->data['status'] ??
-               '';
+        elseif(isset($this->data['gatewayResponseMessage'])){
+            $message = $this->data['gatewayResponseMessage'];
+        }
+        return $message;
     }
 
     /**
@@ -195,40 +152,7 @@ class PaymentResponse implements RequestResponseInterface
         // For now, we'll let Craft Commerce handle the redirect
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function isProcessing(): bool
-    {
-        if (isset($this->data['status'])) {
-            return in_array(strtolower($this->data['status']), [
-                'processing', 
-                'pending', 
-                'in_progress',
-                'awaiting_authentication'
-            ]);
-        }
-
-        if (isset($this->data['transaction']['status'])) {
-            return in_array(strtolower($this->data['transaction']['status']), [
-                'processing', 
-                'pending', 
-                'in_progress',
-                'awaiting_authentication'
-            ]);
-        }
-
-        // Check for 3D Secure processing
-        if (isset($this->data['threeDSecure']['status'])) {
-            return in_array(strtolower($this->data['threeDSecure']['status']), [
-                'challenge_required',
-                'authenticating',
-                'pending'
-            ]);
-        }
-
-        return false;
-    }
+    
 
     /**
      * Check if this is a successful 3D Secure authentication

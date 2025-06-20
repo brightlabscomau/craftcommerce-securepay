@@ -16,9 +16,11 @@ use brightlabs\securepay\models\SecurePayPaymentForm;
 use brightlabs\securepay\responses\PaymentResponse;
 use craft\web\Response as WebResponse;
 use craft\web\View;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
-
+use yii\base\Exception;
+use SecurePayApi\Endpoint;
+use SecurePayApi\Model\Credential;
+use SecurePayApi\Request\ClientCredentialsRequest;
+use SecurePayApi\Request\CardPayment\CreatePaymentRequest;
 /**
  * SecurePay Gateway
  *
@@ -78,8 +80,6 @@ class Gateway extends BaseGateway
      * @var string Fraud detection provider (fraudguard or aci)
      */
     public string $fraudProvider = 'fraudguard';
-
-
 
     /**
      * @var string Background color for JS SDK
@@ -142,15 +142,31 @@ class Gateway extends BaseGateway
     public bool $cardPayments = true;
 
     /**
-     * @var string|null Cached access token
-     */
-    private ?string $accessToken = null;
-
-    /**
      * @var int Token expiration timestamp
      */
     private int $tokenExpiresAt = 0;
+    /**
+     * @var Credential|null Credential instance
+     */
+    private ?Credential $credential = null;
 
+    /**
+     * @var string|null Tokenized card token
+     */
+    private ?string $cardTokenize = null;
+    /**
+     * @var string|null Tokenized card Created At
+     */
+    private ?string $cardCreatedAt = null;
+    /**
+     * @var string|null Tokenized card Scheme
+     */
+    private ?string $cardScheme = null;
+
+    /**
+     * @var string|null SecurePay Order ID
+     */
+    private ?string $securePayOrderId = null;
     // Public Methods
     // =========================================================================
 
@@ -208,15 +224,18 @@ class Gateway extends BaseGateway
     private function registerJavaScriptSDK($view): void
     {
         $baseUrl = $this->sandboxMode 
-            ? 'https://payments-stest.npe.auspost.zone'
-            : 'https://payments.auspost.net.au';
+            ? Endpoint::ENDPOINT_API_SANDBOX
+            : Endpoint::ENDPOINT_API_LIVE;
+            
+        $jsUrl = $this->sandboxMode 
+            ? Endpoint::URL_SANDBOX_SCRIPT
+            : Endpoint::URL_LIVE_SCRIPT;
 
         // Register the SecurePay JavaScript SDK
-        $view->registerJsFile($baseUrl . '/v3/ui/client/securepay-ui.min.js', [
-            'defer' => true,
+        $view->registerScript('', View::POS_END, [
+            'src' => $jsUrl,
             'id'  => 'securepay-ui-js'
-        ]);
-
+        ]); 
         // Initialize SecurePay configuration
         $config = [
             'baseUrl' => $baseUrl,
@@ -257,14 +276,17 @@ class Gateway extends BaseGateway
                 card: { // card specific config options / callbacks
                     showCardIcons: " . ($this->showCardIcons ? 'true' : 'false') . ",
                     allowedCardTypes: " . Json::encode($this->allowedCardTypes) . ",
-                    onTokeniseSuccess: function(tokenisedCard) {
-                        alert(1);
+                    onFormValidityChange: function(valid) {
+                        window.mySecurePayUI.tokenise();
+                        
+                    },
+                    onTokeniseSuccess: async function(tokenisedCard) {
                         console.log(tokenisedCard);
-                        // card was successfully tokenised
-                        // here you could make a payment using the SecurePay API (via your application server)
+                        document.getElementById('cartToken').value = tokenisedCard.token;
+                        document.getElementById('cartCreatedAt').value = tokenisedCard.createdAt;
+                        document.getElementById('cartScheme').value = tokenisedCard.scheme;
                     },
                     onTokeniseError: function(errors) {
-                        alert(2);
                         console.log(errors);
                         // error while tokenising card 
                     }
@@ -281,7 +303,14 @@ class Gateway extends BaseGateway
      */
     public function getPaymentFormModel(): BasePaymentForm
     {
-        return new SecurePayPaymentForm();
+        $this->cardTokenize = Craft::$app->getRequest()->getBodyParam('token');
+        $this->cardCreatedAt = Craft::$app->getRequest()->getBodyParam('createdAt');
+        $this->cardScheme = Craft::$app->getRequest()->getBodyParam('scheme');
+        $securePayPaymentForm = new SecurePayPaymentForm();
+        $securePayPaymentForm->token = $this->cardTokenize;
+        $securePayPaymentForm->createdAt = $this->cardCreatedAt;
+        $securePayPaymentForm->scheme = $this->cardScheme;
+        return $securePayPaymentForm;
     }
 
     /**
@@ -290,7 +319,6 @@ class Gateway extends BaseGateway
      */
     public function availableForUseWithOrder(Order $order): bool
     {
-     
         // Log the availability check for debugging
         Craft::info('SecurePay availability check for order ID: ' . $order->id, __METHOD__);
         
@@ -328,6 +356,7 @@ class Gateway extends BaseGateway
         //     Craft::info('SecurePay unavailable: Country restriction (country: ' . $order->billingAddress->countryCode . ')', __METHOD__);
         //     return false;
         // }
+
         Craft::info('SecurePay available for order ID: ' . $order->id, __METHOD__);
         return true;
     }
@@ -337,8 +366,7 @@ class Gateway extends BaseGateway
      */
     public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
-        echo 4;
-        exit();
+
         return $this->createPayment($transaction, $form, false);
     }
 
@@ -361,7 +389,33 @@ class Gateway extends BaseGateway
             return new PaymentResponse(['error' => $e->getMessage()]);
         }
     }
+      /**
+     * @inheritdoc
+     */
+    public function purchase(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
+    {
+        return $this->createPayment($transaction, $form, true);
+    }
+     /**
+     * @inheritdoc
+     */
+    public function refund(Transaction $transaction): RequestResponseInterface
+    {
+        try {
+            $refundData = [
+                'amount' => $this->convertAmount($transaction->paymentAmount),
+                'currency' => $transaction->paymentCurrency,
+                'reason' => 'Refund requested',
+            ];
 
+            $response = $this->sendRequest('POST', '/v2/payments/' . $transaction->reference . '/refund', $refundData);
+            
+            return new PaymentResponse($response);
+        } catch (\Exception $e) {
+            Craft::error('SecurePay refund error: ' . $e->getMessage(), __METHOD__);
+            return new PaymentResponse(['error' => $e->getMessage()]);
+        }
+    }
     /**
      * @inheritdoc
      */
@@ -398,37 +452,7 @@ class Gateway extends BaseGateway
         // Would delete stored payment instrument if supported
         return false;
     }
-
-    /**
-     * @inheritdoc
-     */
-    public function purchase(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
-    {
-        echo 5;
-        exit();
-        return $this->createPayment($transaction, $form, true);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function refund(Transaction $transaction): RequestResponseInterface
-    {
-        try {
-            $refundData = [
-                'amount' => $this->convertAmount($transaction->paymentAmount),
-                'currency' => $transaction->paymentCurrency,
-                'reason' => 'Refund requested',
-            ];
-
-            $response = $this->sendRequest('POST', '/v2/payments/' . $transaction->reference . '/refund', $refundData);
-            
-            return new PaymentResponse($response);
-        } catch (\Exception $e) {
-            Craft::error('SecurePay refund error: ' . $e->getMessage(), __METHOD__);
-            return new PaymentResponse(['error' => $e->getMessage()]);
-        }
-    }
+  
 
     /**
      * @inheritdoc
@@ -499,7 +523,7 @@ class Gateway extends BaseGateway
      */
     public function supportsPaymentSources(): bool
     {
-        return true; // Could be true if implementing payment instruments
+        return false; // Could be true if implementing payment instruments
     }
 
     /**
@@ -587,8 +611,8 @@ class Gateway extends BaseGateway
     }
 
     /**
-     * @inheritdoc
-     */
+    * @inheritdoc
+    */
     public function rules(): array
     {
         $rules = parent::rules();
@@ -604,247 +628,111 @@ class Gateway extends BaseGateway
 
     // Private Methods
     // =========================================================================
+    /**
+     * Get or create SecurePay credential with caching
+     * @return mixed
+     * @throws Exception
+     */
+    public function getCredential()
+    {
 
+        if ($this->credential === null) {
+            $cache = Craft::$app->getCache();
+            $cache_key = "securepay_token2_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCode . $this->clientId . $this->clientSecret);
+            $token = $cache->getOrSet($cache_key, function()  {
+                try {
+					$request = new ClientCredentialsRequest(!$this->sandboxMode, $this->clientId, $this->clientSecret);
+					$response = $request->execute();
+
+					if (method_exists($response, 'getFirstError') && $response->getFirstError()) {
+						$message = $response->getFirstError()->getDetail();
+                        Craft::error($message, __METHOD__);
+						throw new Exception($message);
+					}
+					$token = $response->getAccessToken();
+                    // Create credential object (you may need to create this class)
+                    return $token;
+                   
+				} catch (\Exception $e) {
+                    $message = $e->getMessage() ?: get_class($e);
+                    Craft::error('SecurePay getCredential ERROR: ' . $message . '. Mode: ' . ($isLive ? 'Live' : 'Test'), __METHOD__);
+                    throw new Exception($message);
+                }
+            }, 86400); // Default 1 day
+            $this->credential = new Credential(!$this->sandboxMode, $this->merchantCode, $this->clientId, $this->clientSecret, $token);
+            
+        }
+    }
     /**
      * Create a payment using SecurePay API following Commerce patterns
      */
     private function createPayment(Transaction $transaction, BasePaymentForm $form, bool $capture): RequestResponseInterface
     {
         try {
+            // get credential and SecurePay Authentication
+            $this->getCredential();
+            // get order and payment data
             $order = $transaction->getOrder();
-
-            // Prepare payment data according to SecurePay API documentation
+            
             $paymentData = [
-                'merchant' => [
-                    'code' => $this->merchantCode,
-                ],
-                'customer' => [
-                    'customerNumber' => $order->customerId ?: StringHelper::randomString(8),
-                    'firstName' => $order->billingAddress->firstName ?? '',
-                    'lastName' => $order->billingAddress->lastName ?? '',
-                    'email' => $order->email,
-                    'phone' => $order->billingAddress->phone ?? '',
-                ],
-                'transaction' => [
-                    'reference' => $transaction->hash,
-                    'amount' => $this->convertAmount($transaction->paymentAmount),
-                    'currency' => $transaction->paymentCurrency,
-                    'capture' => $capture,
-                    'description' => 'Order #' . $order->number,
-                ],
+                'merchantCode' => $this->credential->getMerchantCode(),
+                'token' => $this->cardTokenize,
+                'ip' => $this->getOrderIp($order),
+                'amount' => $this->convertAmount($transaction->paymentAmount),
+                'currency' => 'AUD', //$transaction->paymentCurrency,
             ];
 
-            // Handle JavaScript SDK tokenized payments
-            if (!empty($form->token)) {
-                $paymentData['payment'] = [
-                    'token' => $form->token,
+            if ($order->id) {
+                $paymentData['orderId'] = (string) $order->id.""; // --> can cause INVALID_ORDER_ID
+            }
+            if($order->customerId && 0){
+                $paymentData['customerCode'] = (string) $order->customerId.""; // --> can cause INVALID_ORDER_ID
+            }
+            // For DCC
+            if ($this->dynamicCurrencyConversion && $this->securePayOrderId) {
+                $paymentData['dccDetails'] = ['initiatedOrderId' => $this->securePayOrderId];
+            }
+            if ($this->fraudDetection && $this->fraudProvider == 'fraudguard') {
+                $paymentData['fraudCheckDetails'] = [
+                    // 'providerReferenceNumber' => '',
+                    'fraudCheckType' => 'FRAUD_GUARD',
                 ];
-            } else {
-                // Direct card payment (when not using JS SDK)
-                $paymentData['payment'] = [
-                    'card' => [
-                        'number' => $form->number,
-                        'expiryMonth' => str_pad($form->month, 2, '0', STR_PAD_LEFT),
-                        'expiryYear' => $form->year,
-                        'cvv' => $form->cvv,
-                        'cardHolderName' => trim($form->firstName . ' ' . $form->lastName),
-                    ],
+                $paymentData['fraudCheckDetails']['customerDetails'] = [
+                'emailAddress' => $order->email,
+                ];
+                $paymentData['fraudCheckDetails']['shippingAddress'] = [
+                'firstName' => $order->shippingAddress->firstName ?: $order->billingAddress->firstName,
+                'lastName' => $order->shippingAddress->lastName ?: $order->billingAddress->lastName,
+                'city' => $order->shippingAddress->city ?: $order->billingAddress->city,
+                'postcode' => $order->shippingAddress->zipCode ?: $order->billingAddress->zipCode,
+                'countryCode' => $order->shippingAddress->countryCode ?: $order->billingAddress->countryCode,
+                ];
+                $paymentData['fraudCheckDetails']['billingAddress'] = [
+                'countryCode' => $order->billingAddress->countryCode,
                 ];
             }
-
-            // Add billing address
-            if ($order->billingAddress) {
-                $paymentData['billing'] = [
-                    'address' => [
-                        'line1' => $order->billingAddress->address1,
-                        'line2' => $order->billingAddress->address2 ?? '',
-                        'city' => $order->billingAddress->city,
-                        'state' => $order->billingAddress->stateText,
-                        'postcode' => $order->billingAddress->zipCode,
-                        'country' => $order->billingAddress->countryCode,
-                    ],
-                ];
-            }
-
-            // Add shipping address if different from billing
-            if ($order->shippingAddress && !$order->hasMatchingAddresses()) {
-                $paymentData['shipping'] = [
-                    'address' => [
-                        'line1' => $order->shippingAddress->address1,
-                        'line2' => $order->shippingAddress->address2 ?? '',
-                        'city' => $order->shippingAddress->city,
-                        'state' => $order->shippingAddress->stateText,
-                        'postcode' => $order->shippingAddress->zipCode,
-                        'country' => $order->shippingAddress->countryCode,
-                    ],
-                ];
-            }
-
-            // Add 3D Secure configuration
             if ($this->threeDSecure) {
-                $paymentData['threeDSecure'] = [
-                    'enabled' => true,
-                    'challengeIndicator' => '01', // No preference
-                    'returnUrl' => UrlHelper::actionUrl('commerce/payments/complete-payment', [
-                        'commerceTransactionHash' => $transaction->hash
-                    ]),
-                ];
+                $orderId = $this->securePayOrderId;
+                $paymentData['threedSecureDetails'] = ['initiatedOrderId' => $orderId];
             }
-
-            // Add fraud detection configuration
-            if ($this->fraudDetection) {
-                $paymentData['fraud'] = [
-                    'enabled' => true,
-                    'provider' => $this->fraudProvider,
-                ];
-            }
-
-            // Add DCC configuration
-            if ($this->dynamicCurrencyConversion) {
-                $paymentData['dcc'] = [
-                    'enabled' => true,
-                ];
-            }
-
-            $response = $this->sendRequest('POST', '/v2/payments', $paymentData);
+            // Prepare payment data according to SecurePay API documentation
+            $createPaymentRequest = new CreatePaymentRequest($this->credential->isLive(),	$this->credential, $paymentData);
             
-            Craft::info('SecurePay payment created: ' . ($response['txnReference'] ?? 'unknown'), __METHOD__);
-            
-            return new PaymentResponse($response);
+            try {
+                $create_payment_result = $createPaymentRequest->execute()->toArray();
+                 Craft::info('CreatePaymentResponse Response: '. json_encode($create_payment_result),__METHOD__);
+
+              } catch (\Exception $e) {
+                $this->error_message = $e->getMessage();
+                Craft::error('CreatePaymentResponse ERROR: '. $e->getMessage(), __METHOD__);
+              }
+            return new PaymentResponse($create_payment_result);
         } catch (\Exception $e) {
             Craft::error('SecurePay payment error: ' . $e->getMessage(), __METHOD__);
             return new PaymentResponse(['error' => $e->getMessage()]);
         }
     }
 
-    /**
-     * Get transaction status for completion methods
-     */
-    private function getTransactionStatus(Transaction $transaction): RequestResponseInterface
-    {
-        try {
-            if (!$transaction->reference) {
-                throw new \Exception('No transaction reference available');
-            }
-
-            $response = $this->sendRequest('GET', '/v2/payments/' . $transaction->reference);
-            
-            return new PaymentResponse($response);
-        } catch (\Exception $e) {
-            Craft::error('SecurePay status check error: ' . $e->getMessage(), __METHOD__);
-            return new PaymentResponse(['error' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Handle incoming webhook events
-     */
-    private function handleWebhookEvent(array $data): void
-    {
-        // Implementation would depend on SecurePay webhook format
-        // Common events: payment.completed, payment.failed, 3ds.completed, etc.
-        
-        if (isset($data['eventType']) && isset($data['transactionReference'])) {
-            Craft::info('SecurePay webhook received: ' . $data['eventType'] . ' for ' . $data['transactionReference'], __METHOD__);
-            
-            // Process different event types
-            switch ($data['eventType']) {
-                case 'payment.completed':
-                case '3ds.completed':
-                    // Update transaction status
-                    break;
-                case 'payment.failed':
-                case '3ds.failed':
-                    // Handle failure
-                    break;
-                default:
-                    Craft::warning('Unknown SecurePay webhook event: ' . $data['eventType'], __METHOD__);
-            }
-        }
-    }
-
-    /**
-     * Get access token for API requests
-     */
-    private function getAccessToken(): string
-    {
-        // Check if we have a valid token
-        if ($this->accessToken && time() < $this->tokenExpiresAt) {
-            return $this->accessToken;
-        }
-
-        // Get new token
-        $client = new Client();
-        $authUrl = $this->sandboxMode 
-            ? 'https://welcome.api2.sandbox.auspost.com.au/oauth/token'
-            : 'https://welcome.api2.auspost.com.au/oauth/token';
-
-        try {
-            $response = $client->post($authUrl, [
-                'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode($this->clientId . ':' . $this->clientSecret),
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                ],
-                'form_params' => [
-                    'grant_type' => 'client_credentials',
-                    'audience' => 'https://api.payments.auspost.com.au',
-                ],
-            ]);
-
-            $body = Json::decode($response->getBody()->getContents());
-            
-            $this->accessToken = $body['access_token'];
-            $this->tokenExpiresAt = time() + ($body['expires_in'] - 300); // Subtract 5 minutes for safety
-
-            return $this->accessToken;
-        } catch (RequestException $e) {
-            throw new \Exception('Failed to get access token: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Send request to SecurePay API
-     */
-    private function sendRequest(string $method, string $endpoint, array $data = []): array
-    {
-        $baseUrl = $this->sandboxMode 
-            ? 'https://payments-stest.npe.auspost.zone'
-            : 'https://payments.auspost.net.au';
-
-        $client = new Client();
-        $accessToken = $this->getAccessToken();
-
-        try {
-            $options = [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken,
-                    'Content-Type' => 'application/json',
-                ],
-            ];
-
-            if (!empty($data)) {
-                $options['json'] = $data;
-            }
-
-            $response = $client->request($method, $baseUrl . $endpoint, $options);
-
-            return Json::decode($response->getBody()->getContents());
-        } catch (RequestException $e) {
-            $message = $e->getMessage();
-            
-            if ($e->hasResponse()) {
-                $responseBody = $e->getResponse()->getBody()->getContents();
-                try {
-                    $responseData = Json::decode($responseBody);
-                    $message = $responseData['message'] ?? $message;
-                } catch (\Exception $decodeError) {
-                    // Use original message if JSON decode fails
-                }
-            }
-
-            throw new \Exception($message);
-        }
-    }
 
     /**
      * Convert amount to cents (SecurePay expects amounts in cents)
@@ -852,5 +740,65 @@ class Gateway extends BaseGateway
     private function convertAmount(float $amount): int
     {
         return (int) round($amount * 100);
+    }
+
+    /**
+     * Get customer IP address for Craft CMS
+     * @param Order $order
+     * @return string
+     */
+    private function getOrderIp($order): string
+    {
+        $ip_address = '';
+        
+        try {
+            // Try to get IP from request
+            $request = Craft::$app->getRequest();
+            $ip_address = $request->getUserIP();
+            
+            if (!$ip_address) {
+                // Fallback to server variables
+                $ip_address = $_SERVER['HTTP_CLIENT_IP'] ?? 
+                             $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 
+                             $_SERVER['REMOTE_ADDR'] ?? '';
+            }
+        } catch (\Exception $e) {
+            Craft::error('Error getting IP address: ' . $e->getMessage(), __METHOD__);
+        }
+        
+        return $ip_address ?: '127.0.0.1';
+    }
+
+    /**
+     * Get user IP address (fallback method)
+     * @return string
+     */
+    private function getUserIpAddr(): string
+    {
+        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+            // IP from shared internet
+            $ip = $_SERVER['HTTP_CLIENT_IP'];
+        } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            // IP passed from proxy
+            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        } else {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        }
+        return $ip;
+    }
+
+    /**
+     * Get access token from credential
+     * @return string|null
+     */
+    public function getAccessToken(): ?string
+    {
+        try {
+            $credential = $this->getCredential();
+            return $credential['accessToken'] ?? null;
+        } catch (\Exception $e) {
+            Craft::error('Error getting access token: ' . $e->getMessage(), __METHOD__);
+            return null;
+        }
     }
 } 
