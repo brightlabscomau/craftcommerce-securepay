@@ -5,16 +5,25 @@ namespace brightlabs\securepay\responses;
 use craft\commerce\base\RequestResponseInterface;
 
 /**
- * SecurePay Payment Response
+ * SecurePay Refund Response
  *
  * @author Brightlabs
- * @since 1.0
+ * @since 1.1
  */
 // successfull data respond
-// Array ( [createdAt] => 2025-06-20T03:43:21.588919675Z [amount] => 86800 [currency] => AUD [status] => paid [bankTransactionId] => 664437 [gatewayResponseCode] => 00 [gatewayResponseMessage] => Transaction successful [customerCode] => anonymous [merchantCode] => 5AR0055 [ip] => 192.168.97.1 [token] => 1738992071975167 [orderId] => 940992 )
-// error data respond
-// Array ( [errors] => Array ( [0] => Array ( [code] => 400 [detail] => Invalid request parameters ) ) )
-class PaymentResponse implements RequestResponseInterface
+/*{
+    "createdAt": "2025-06-23T01:17:12.867284974Z",
+    "amount": 9900,
+    "status": "paid",
+    "bankTransactionId": "666577",
+    "gatewayResponseCode": "00",
+    "gatewayResponseMessage": "Transaction successful",
+    "customerCode": "anonymous",
+    "merchantCode": "5AR0055",
+    "orderId": "941037",
+    "ip": "192.168.97.1"
+}*/
+class RefundResponse implements RequestResponseInterface
 {
     /**
      * @var array
@@ -100,6 +109,7 @@ class PaymentResponse implements RequestResponseInterface
      */
     public function getCode(): string
     {
+        
         $code = '';
         if (isset($this->data['errors'])) {
             if(is_array($this->data['errors'])){

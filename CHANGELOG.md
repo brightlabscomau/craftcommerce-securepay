@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2025-01-27
+## [1.0.0] - 2025-06-20
 
 ### Added
 - Initial release of SecurePay for Craft Commerce
@@ -58,3 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dynamic Currency Conversion (not yet implemented)
 - Payment sources/stored payment methods (not yet implemented)
 - Fraud detection integration (not yet implemented) 
+
+## [1.1.0] - 2025-06-23
+### Added
+- Full and partial refunds are supported only for AUD transactions
+- For DCC transactions, a refund is not available via the plugin.
+- Only full refunds are supported and available via the SecurePay Merchant Portal for DCC transactions.
+

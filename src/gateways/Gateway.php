@@ -12,6 +12,7 @@ use craft\commerce\elements\Order;
 use craft\helpers\Json;
 use brightlabs\securepay\models\SecurePayPaymentForm;
 use brightlabs\securepay\responses\PaymentResponse;
+use brightlabs\securepay\responses\RefundResponse;
 use craft\web\Response as WebResponse;
 use craft\web\View;
 use yii\base\Exception;
@@ -19,6 +20,7 @@ use SecurePayApi\Endpoint;
 use SecurePayApi\Model\Credential;
 use SecurePayApi\Request\ClientCredentialsRequest;
 use SecurePayApi\Request\CardPayment\CreatePaymentRequest;
+use SecurePayApi\Request\CardPayment\RefundPaymentRequest;
 /**
  * SecurePay Gateway
  *
@@ -125,6 +127,7 @@ class Gateway extends BaseGateway
      */
     private ?string $cardScheme = null;
 
+    private string $defaultCurrency = 'AUD';
     // Public Methods
     // =========================================================================
 
@@ -320,7 +323,6 @@ class Gateway extends BaseGateway
      */
     public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
-
         return new PaymentResponse(['error' => 'Authorize not supported']);
     }
 
@@ -332,7 +334,7 @@ class Gateway extends BaseGateway
         return new PaymentResponse(['error' => 'Capture not supported']);
 
     }
-      /**
+    /**
      * @inheritdoc
      */
     public function purchase(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
@@ -344,7 +346,7 @@ class Gateway extends BaseGateway
      */
     public function refund(Transaction $transaction): RequestResponseInterface
     {
-        return new PaymentResponse(['error' => 'Refund not supported']);
+        return $this->refundPayment($transaction);
     }
     /**
      * @inheritdoc
@@ -571,7 +573,7 @@ class Gateway extends BaseGateway
                         Craft::error($message, __METHOD__);
 						throw new Exception($message);
 					}
-					$token = $response->getAccessToken();
+					$token = $response->_getAccessToken();
                     // Create credential object (you may need to create this class)
                     return $token;
                    
@@ -587,6 +589,10 @@ class Gateway extends BaseGateway
     }
     /**
      * Create a payment using SecurePay API following Commerce patterns
+     * @param Transaction $transaction
+     * @param BasePaymentForm $form
+     * @param bool $capture
+     * @return RequestResponseInterface
      */
     private function createPayment(Transaction $transaction, BasePaymentForm $form, bool $capture): RequestResponseInterface
     {
@@ -599,9 +605,9 @@ class Gateway extends BaseGateway
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
                 'token' => $this->cardTokenize,
-                'ip' => $this->getOrderIp($order),
-                'amount' => $this->convertAmount($transaction->paymentAmount),
-                'currency' => 'AUD', //$transaction->paymentCurrency,
+                'ip' => $this->_getOrderIp($order),
+                'amount' => $this->_convertAmount($transaction->paymentAmount),
+                'currency' => $this->defaultCurrency, //$transaction->paymentCurrency,
             ];
 
             if ($order->id) {
@@ -628,12 +634,54 @@ class Gateway extends BaseGateway
             return new PaymentResponse(['error' => $e->getMessage()]);
         }
     }
+    /**
+     * 
+     * Refund a payment using SecurePay API following Commerce patterns
+     * @param Transaction $transaction
+     * @return RequestResponseInterface
+     * @since 1.1.0
+     */
+    private function refundPayment(Transaction $transaction): RequestResponseInterface
+    {
+        try {
+            // get order and payment data
+            $order = $transaction->getOrder();
+                if($order->currency != $this->defaultCurrency || $transaction->paymentCurrency != $this->defaultCurrency){
+                Craft::error('SecurePay refund payment error: ' . 'Currency mismatch', __METHOD__);
+                return new RefundResponse(['status' => 'failed', 'gatewayResponseCode' => '-1', 'gatewayResponseMessage' => 'Only AUD is supported']);
+            }
+            // get credential and SecurePay Authentication
+            $this->getCredential();
+            $paymentData = [
+                'merchantCode' => $this->credential->getMerchantCode(),
+                'ip' => $this->_getOrderIp($order),
+                'amount' => $this->_convertAmount($transaction->paymentAmount),
+            ];
 
+            // Prepare payment data according to SecurePay API documentation
+            $RefundPaymentRequest = new RefundPaymentRequest($this->credential->isLive(),	$this->credential, $paymentData, $order->id);
+            
+            try {
+                $refund_payment_result = $RefundPaymentRequest->execute()->toArray();
+                 Craft::info('RefundPaymentRequest Response: '. json_encode($refund_payment_result),__METHOD__);
+
+              } catch (\Exception $e) {
+                $this->error_message = $e->getMessage();
+                Craft::error('RefundPaymentRequest ERROR: '. $e->getMessage(), __METHOD__);
+              }
+            return new RefundResponse($refund_payment_result);
+        } catch (\Exception $e) {
+            Craft::error('SecurePay payment error: ' . $e->getMessage(), __METHOD__);
+            return new RefundResponse(['error' => $e->getMessage()]);
+        }
+    }
 
     /**
      * Convert amount to cents (SecurePay expects amounts in cents)
+     * @param float $amount
+     * @return int
      */
-    private function convertAmount(float $amount): int
+    private function _convertAmount(float $amount): int
     {
         return (int) round($amount * 100);
     }
@@ -643,7 +691,7 @@ class Gateway extends BaseGateway
      * @param Order $order
      * @return string
      */
-    private function getOrderIp($order): string
+    private function _getOrderIp($order): string
     {
         $ip_address = '';
         
@@ -669,7 +717,7 @@ class Gateway extends BaseGateway
      * Get user IP address (fallback method)
      * @return string
      */
-    private function getUserIpAddr(): string
+    private function _getUserIpAddr(): string
     {
         if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
             // IP from shared internet
@@ -687,7 +735,7 @@ class Gateway extends BaseGateway
      * Get access token from credential
      * @return string|null
      */
-    public function getAccessToken(): ?string
+    public function _getAccessToken(): ?string
     {
         try {
             $credential = $this->getCredential();

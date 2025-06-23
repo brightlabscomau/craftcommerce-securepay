@@ -542,23 +542,21 @@ if (result.error) {
 - [x] Provides proper error handling
 - [x] Supports JavaScript SDK integration
 - [x] Implements configuration validation
+- [x] Implements refund operations (planned)
 - [ ] Implements authorize/capture operations (planned)
-- [ ] Implements refund operations (planned)
 - [ ] Implements payment sources (planned)
 
 ## Current Limitations
 
 1. **Authorize/Capture Flow**: Not yet implemented - currently only supports immediate purchase
-2. **Refund Operations**: Not yet implemented
-3. **Payment Sources**: Not yet implemented (stored payment methods)
-4. **3D Secure**: Basic support through completion methods
+2. **Payment Sources**: Not yet implemented (stored payment methods)
+3. **3D Secure**: Basic support through completion methods
 
 ## Future Enhancements
 
 1. **Authorize/Capture**: Implement two-step payment processing
-2. **Refunds**: Add support for full and partial refunds
-3. **Payment Sources**: Support for storing payment methods
-4. **Enhanced 3D Secure**: Improved 3D Secure authentication flow
-5. **Fraud Detection**: Integration with SecurePay's fraud detection features
+2. **Payment Sources**: Support for storing payment methods
+3. **Enhanced 3D Secure**: Improved 3D Secure authentication flow
+4. **Fraud Detection**: Integration with SecurePay's fraud detection features
 
 This integration follows all the patterns described in the [official Craft Commerce payment gateway documentation](https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html) and provides a solid foundation for SecurePay payment processing with room for future enhancements. 
