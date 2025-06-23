@@ -2,7 +2,7 @@
 
 This plugin provides a SecurePay payment gateway integration for Craft Commerce, implementing the [official SecurePay API v2](https://auspost.com.au/payments/docs/securepay/) using the recommended JavaScript SDK for enhanced security.
 
-**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.1.0 | **Package**: `brightlabs/craft-securepay`
+**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.2.0 | **Package**: `brightlabs/craft-securepay`
 
 ## 🚀 Features
 
@@ -10,6 +10,7 @@ This plugin provides a SecurePay payment gateway integration for Craft Commerce,
 - **Credit/Debit Cards**: Accept Visa, Mastercard, Amex, and Diners Club cards through a secure, tokenized process.
 - **JavaScript SDK Integration**: Enhanced security with client-side tokenization. The plugin handles all SDK configuration and rendering automatically.
 - **Purchase Transactions**: Supports immediate capture of funds (purchase).
+- **Authorisation and Capture Workflows**: Supports authorize now, capture later workflows for delayed payment processing.
 - **Full and Partial Refund**: Supports full and partial refunds only for AUD transactions.
 - **Sandbox Testing**: Complete support for SecurePay's sandbox environment.
 
@@ -142,7 +143,8 @@ The plugin provides logging for key events and errors, which can be found in `st
 |---|---|---|:---:|
 | Create Payment | `POST` | `/v2/payments` | ✅ Implemented |
 | Refund Payment | `POST` | `/v2/payments/{id}/refund` | ✅ Implemented |
-| Capture Payment | `POST` | `/v2/payments/{id}/capture` | 🚧 Planned |
+| Authorize Payment | `POST` | `/v2/payments/preauth` | ✅ Implemented |
+| Capture Payment | `POST` | `/v2/payments/{id}/capture` | ✅ Implemented |
 
 ## 📚 Documentation
 
@@ -162,7 +164,6 @@ This plugin is licensed under the MIT License.
 ## 📈 Roadmap
 
 ### Future Releases
-- [ ] Authorize and Capture Workflows
 - [ ] 3D Secure 2.0 Integration
 - [ ] Fraud Detection Features (FraudGuard)
 - [ ] Apple Pay Support

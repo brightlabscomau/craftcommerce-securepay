@@ -5,7 +5,7 @@
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
 **Plugin Package**: `brightlabs/craft-securepay`  
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps
@@ -81,8 +81,13 @@ The plugin offers extensive styling options for the payment form, allowing you t
 - For DCC transactions, a refund is not available via the plugin.
 - Only full refunds are supported and available via the SecurePay Merchant Portal for DCC transactions.
 
+✅ **Implemented in v1.2.0**
+- Authorisation and capture workflows for SecurePay gateway
+- Refactored response handling to use unified SecurePayResponse class
+- Removed individual response classes and consolidated all API responses into single response
+- Technical Improvements
+
 🚧 **Planned for Future Versions**
-- Authorize and Capture workflows
 - 3D Secure 2.0 authentication
 - Fraud detection integration
 - Apple Pay support

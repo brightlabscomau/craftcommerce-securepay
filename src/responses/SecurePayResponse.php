@@ -8,13 +8,9 @@ use craft\commerce\base\RequestResponseInterface;
  * SecurePay Payment Response
  *
  * @author Brightlabs
- * @since 1.0
+ * @since 1.2.0
  */
-// successfull data respond
-// Array ( [createdAt] => 2025-06-20T03:43:21.588919675Z [amount] => 86800 [currency] => AUD [status] => paid [bankTransactionId] => 664437 [gatewayResponseCode] => 00 [gatewayResponseMessage] => Transaction successful [customerCode] => anonymous [merchantCode] => 5AR0055 [ip] => 192.168.97.1 [token] => 1738992071975167 [orderId] => 940992 )
-// error data respond
-// Array ( [errors] => Array ( [0] => Array ( [code] => 400 [detail] => Invalid request parameters ) ) )
-class PaymentResponse implements RequestResponseInterface
+class SecurePayResponse implements RequestResponseInterface
 {
     /**
      * @var array

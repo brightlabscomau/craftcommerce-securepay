@@ -11,8 +11,7 @@ use craft\commerce\models\Transaction;
 use craft\commerce\elements\Order;
 use craft\helpers\Json;
 use brightlabs\securepay\models\SecurePayPaymentForm;
-use brightlabs\securepay\responses\PaymentResponse;
-use brightlabs\securepay\responses\RefundResponse;
+use brightlabs\securepay\responses\SecurePayResponse;
 use craft\web\Response as WebResponse;
 use craft\web\View;
 use yii\base\Exception;
@@ -21,6 +20,8 @@ use SecurePayApi\Model\Credential;
 use SecurePayApi\Request\ClientCredentialsRequest;
 use SecurePayApi\Request\CardPayment\CreatePaymentRequest;
 use SecurePayApi\Request\CardPayment\RefundPaymentRequest;
+use SecurePayApi\Request\CardPayment\CreatePreAuthRequest;
+use SecurePayApi\Request\CardPayment\CapturePreAuthRequest;
 /**
  * SecurePay Gateway
  *
@@ -323,7 +324,7 @@ class Gateway extends BaseGateway
      */
     public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
-        return new PaymentResponse(['error' => 'Authorize not supported']);
+        return $this->authorizePayment($transaction, $form);
     }
 
     /**
@@ -331,7 +332,7 @@ class Gateway extends BaseGateway
      */
     public function capture(Transaction $transaction, string $reference): RequestResponseInterface
     {
-        return new PaymentResponse(['error' => 'Capture not supported']);
+        return $this->capturePayment($transaction, $reference);
 
     }
     /**
@@ -353,8 +354,7 @@ class Gateway extends BaseGateway
      */
     public function completeAuthorize(Transaction $transaction): RequestResponseInterface
     {
-        // For 3D Secure completions or webhook-driven completions
-        return $this->getTransactionStatus($transaction);
+        return new SecurePayResponse(['error' => 'Complete Authorize not supported']);
     }
 
     /**
@@ -439,7 +439,7 @@ class Gateway extends BaseGateway
      */
     public function supportsCompleteAuthorize(): bool
     {
-        return true; // For 3D Secure and webhook completions
+        return false; // For 3D Secure and webhook completions
     }
 
     /**
@@ -508,7 +508,7 @@ class Gateway extends BaseGateway
     {
         return [
             'purchase' => Craft::t('commerce', 'Purchase (Immediate Capture)'),
-            //'authorize' => Craft::t('commerce', 'Authorize (Capture Later)'),
+            'authorize' => Craft::t('commerce', 'Authorize (Capture Later)'),
         ];
     }
 
@@ -579,7 +579,7 @@ class Gateway extends BaseGateway
                    
 				} catch (\Exception $e) {
                     $message = $e->getMessage() ?: get_class($e);
-                    Craft::error('SecurePay getCredential ERROR: ' . $message . '. Mode: ' . ($isLive ? 'Live' : 'Test'), __METHOD__);
+                    Craft::error('SecurePay getCredential ERROR: ' . $message . '. Mode: ' . (!$this->sandboxMode ? 'Live' : 'Test'), __METHOD__);
                     throw new Exception($message);
                 }
             }, 86400); // Default 1 day
@@ -621,17 +621,17 @@ class Gateway extends BaseGateway
             $createPaymentRequest = new CreatePaymentRequest($this->credential->isLive(),	$this->credential, $paymentData);
             
             try {
-                $create_payment_result = $createPaymentRequest->execute()->toArray();
-                 Craft::info('CreatePaymentResponse Response: '. json_encode($create_payment_result),__METHOD__);
+                $createPaymentResult = $createPaymentRequest->execute()->toArray();
+                 Craft::info('createPaymentRequest Response: '. json_encode($createPaymentResult),__METHOD__);
 
               } catch (\Exception $e) {
                 $this->error_message = $e->getMessage();
-                Craft::error('CreatePaymentResponse ERROR: '. $e->getMessage(), __METHOD__);
+                Craft::error('createPaymentRequest ERROR: '. $e->getMessage(), __METHOD__);
               }
-            return new PaymentResponse($create_payment_result);
+            return new SecurePayResponse($createPaymentResult);
         } catch (\Exception $e) {
             Craft::error('SecurePay payment error: ' . $e->getMessage(), __METHOD__);
-            return new PaymentResponse(['error' => $e->getMessage()]);
+            return new SecurePayResponse(['error' => $e->getMessage()]);
         }
     }
     /**
@@ -648,7 +648,7 @@ class Gateway extends BaseGateway
             $order = $transaction->getOrder();
                 if($order->currency != $this->defaultCurrency || $transaction->paymentCurrency != $this->defaultCurrency){
                 Craft::error('SecurePay refund payment error: ' . 'Currency mismatch', __METHOD__);
-                return new RefundResponse(['status' => 'failed', 'gatewayResponseCode' => '-1', 'gatewayResponseMessage' => 'Only AUD is supported']);
+                return new SecurePayResponse(['status' => 'failed', 'gatewayResponseCode' => '-1', 'gatewayResponseMessage' => 'Only AUD is supported']);
             }
             // get credential and SecurePay Authentication
             $this->getCredential();
@@ -662,17 +662,104 @@ class Gateway extends BaseGateway
             $RefundPaymentRequest = new RefundPaymentRequest($this->credential->isLive(),	$this->credential, $paymentData, $order->id);
             
             try {
-                $refund_payment_result = $RefundPaymentRequest->execute()->toArray();
-                 Craft::info('RefundPaymentRequest Response: '. json_encode($refund_payment_result),__METHOD__);
+                $refundPaymentResult = $RefundPaymentRequest->execute()->toArray();
+                 Craft::info('RefundPaymentRequest Response: '. json_encode($refundPaymentResult),__METHOD__);
 
               } catch (\Exception $e) {
                 $this->error_message = $e->getMessage();
                 Craft::error('RefundPaymentRequest ERROR: '. $e->getMessage(), __METHOD__);
               }
-            return new RefundResponse($refund_payment_result);
+            return new SecurePayResponse($refundPaymentResult);
         } catch (\Exception $e) {
-            Craft::error('SecurePay payment error: ' . $e->getMessage(), __METHOD__);
-            return new RefundResponse(['error' => $e->getMessage()]);
+            Craft::error('SecurePay refund payment error: ' . $e->getMessage(), __METHOD__);
+            return new SecurePayResponse(['error' => $e->getMessage()]);
+        }
+    }
+    /**
+     * 
+     * Authorize a payment using SecurePay API following Commerce patterns
+     * @param Transaction $transaction
+     * @param BasePaymentForm $form
+     * @return RequestResponseInterface
+     * @since 1.2.0
+     */
+    private function authorizePayment(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
+    {
+        try {
+            // get order and payment data
+            $order = $transaction->getOrder();
+            // get credential and SecurePay Authentication
+            $this->getCredential();
+
+            $paymentData = [
+                'merchantCode' => $this->credential->getMerchantCode(),
+                'preAuthType' => 'PRE_AUTH', //PRE_AUTH,INITIAL_AUTH
+                'token' => $this->cardTokenize,
+                'ip' => $this->_getOrderIp($order),
+                'amount' => $this->_convertAmount($transaction->paymentAmount),
+                'currency' => $this->defaultCurrency, //$transaction->paymentCurrency,
+            ];
+            if ($order->id) {
+                $paymentData['orderId'] = (string) $order->id.""; // --> can cause INVALID_ORDER_ID
+            }
+            if($order->customerId && 0){
+                $paymentData['customerCode'] = (string) $order->customerId.""; // --> can cause INVALID_ORDER_ID
+            }
+            // Prepare payment data according to SecurePay API documentation
+            $createPreAuthRequest = new CreatePreAuthRequest($this->credential->isLive(),	$this->credential, $paymentData);
+            
+            try {
+                $createPreAuthResult = $createPreAuthRequest->execute()->toArray();
+               
+                 Craft::info('CreatePreAuthRequest Response: '. json_encode($createPreAuthResult),__METHOD__);
+
+              } catch (\Exception $e) {
+                $this->error_message = $e->getMessage();
+                Craft::error('CreatePreAuthRequest ERROR: '. $e->getMessage(), __METHOD__);
+              }
+            return new SecurePayResponse($createPreAuthResult);
+        } catch (\Exception $e) {
+            Craft::error('SecurePay authorize payment error: ' . $e->getMessage(), __METHOD__);
+            return new SecurePayResponse(['error' => $e->getMessage()]);
+        }
+    }
+    /**
+     * 
+     * Authorize a payment using SecurePay API following Commerce patterns
+     * @param Transaction $transaction
+     * @param BasePaymentForm $form
+     * @return RequestResponseInterface
+     * @since 1.2.0
+     */
+    private function capturePayment(Transaction $transaction, string $reference): RequestResponseInterface
+    {
+        try {
+            // get order and payment data
+            $order = $transaction->getOrder();
+            // get credential and SecurePay Authentication
+            $this->getCredential();
+
+            $paymentData = [
+                'merchantCode' => $this->credential->getMerchantCode(),
+                'ip' => $this->_getOrderIp($order),
+                'amount' => $this->_convertAmount($transaction->paymentAmount),
+            ];
+            // Prepare payment data according to SecurePay API documentation
+            $capturePreAuthRequest = new CapturePreAuthRequest($this->credential->isLive(),	$this->credential, $paymentData ,$order->id);
+            
+            try {
+                $capturePreAuthResult = $capturePreAuthRequest->execute()->toArray();
+               
+                 Craft::info('CapturePreAuthRequest Response: '. json_encode($capturePreAuthResult),__METHOD__);
+
+              } catch (\Exception $e) {
+                $this->error_message = $e->getMessage();
+                Craft::error('CapturePreAuthRequest ERROR: '. $e->getMessage(), __METHOD__);
+              }
+            return new SecurePayResponse($capturePreAuthResult);
+        } catch (\Exception $e) {
+            Craft::error('SecurePay capture payment error: ' . $e->getMessage(), __METHOD__);
+            return new SecurePayResponse(['error' => $e->getMessage()]);
         }
     }
 

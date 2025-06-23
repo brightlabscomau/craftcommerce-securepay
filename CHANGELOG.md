@@ -51,8 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Amount conversion to cents for API compatibility
 
 ### Limitations (Planned for Future Releases)
-- Authorization and capture workflows (not yet implemented)
-- Full and partial refund support (not yet implemented)
+- Authorisation and capture workflows (not yet implemented)
 - 3D Secure 2.0 authentication (basic support only)
 - Apple Pay support (not yet implemented)
 - Dynamic Currency Conversion (not yet implemented)
@@ -65,3 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - For DCC transactions, a refund is not available via the plugin.
 - Only full refunds are supported and available via the SecurePay Merchant Portal for DCC transactions.
 
+## [1.2.0] - 2025-06-23
+### Added
+- Authorisation and capture workflows for SecurePay gateway
+### Changed
+- Refactored response handling to use unified SecurePayResponse class
+- Removed individual response classes and consolidated all API responses into single response 
+### Technical Improvements
+- Unified variable naming convention to camelCase throughout the codebase
+- Standardised method and property naming for better code consistency
+- Improved code readability and maintainability through consistent naming patterns
