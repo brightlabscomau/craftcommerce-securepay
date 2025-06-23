@@ -5,7 +5,7 @@
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
 **Plugin Package**: `brightlabs/craft-securepay`  
-**Version**: 1.2.0  
+**Version**: 1.2.1 
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps
@@ -83,9 +83,7 @@ The plugin offers extensive styling options for the payment form, allowing you t
 
 ✅ **Implemented in v1.2.0**
 - Authorisation and capture workflows for SecurePay gateway
-- Refactored response handling to use unified SecurePayResponse class
-- Removed individual response classes and consolidated all API responses into single response
-- Technical Improvements
+
 
 🚧 **Planned for Future Versions**
 - 3D Secure 2.0 authentication
@@ -97,4 +95,4 @@ The plugin offers extensive styling options for the payment form, allowing you t
 ## Security Notes
 
 - All API communications use HTTPS and are authenticated with OAuth 2.0.
-- This plugin uses SecurePay's JavaScript SDK to tokenize payment information in the browser, ensuring no sensitive card data ever touches your server. This is essential for PCI DSS SAQ-A compliance. 
+- This plugin uses SecurePay's JavaScript SDK to tokenise payment information in the browser, ensuring no sensitive card data ever touches your server. This is essential for PCI DSS SAQ-A compliance. 

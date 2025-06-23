@@ -2,15 +2,15 @@
 
 This plugin provides a SecurePay payment gateway integration for Craft Commerce, implementing the [official SecurePay API v2](https://auspost.com.au/payments/docs/securepay/) using the recommended JavaScript SDK for enhanced security.
 
-**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.2.0 | **Package**: `brightlabs/craft-securepay`
+**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.2.1 | **Package**: `brightlabs/craft-securepay`
 
 ## 🚀 Features
 
 ### Core Payment Processing
-- **Credit/Debit Cards**: Accept Visa, Mastercard, Amex, and Diners Club cards through a secure, tokenized process.
+- **Credit/Debit Cards**: Accept Visa, Mastercard, Amex, and Diners Club cards through a secure, tokenised process.
 - **JavaScript SDK Integration**: Enhanced security with client-side tokenization. The plugin handles all SDK configuration and rendering automatically.
 - **Purchase Transactions**: Supports immediate capture of funds (purchase).
-- **Authorisation and Capture Workflows**: Supports authorize now, capture later workflows for delayed payment processing.
+- **Authorisation and Capture Workflows**: Supports authorise now, capture later workflows for delayed payment processing.
 - **Full and Partial Refund**: Supports full and partial refunds only for AUD transactions.
 - **Sandbox Testing**: Complete support for SecurePay's sandbox environment.
 
@@ -20,7 +20,7 @@ This plugin provides a SecurePay payment gateway integration for Craft Commerce,
 
 ### Admin & Configuration Features
 - **Full Admin Configuration**: All settings are managed within the Craft Commerce gateway settings.
-- **Extensive Styling Options**: Customize the look and feel of the payment form directly from the gateway settings, including colors, fonts, and more.
+- **Extensive Styling Options**: Customise the look and feel of the payment form directly from the gateway settings, including colours, fonts, and more.
 - **Card Type Configuration**: Easily select which card types are allowed for payment.
 
 ## 📋 Requirements
@@ -73,13 +73,13 @@ php craft plugin/install securepay
 |---|---|---|---|
 | Allowed Card Types | Select which card types are allowed | Multi-select | Visa, Mastercard, Amex, Diners |
 | Show Card Icons | Display card brand icons in the payment form | Toggle | ✅ Enabled |
-| Background Color | Background color of the payment form fields | Color | `#ffffff` |
+| Background Colour | Background colour of the payment form fields | Colour | `#ffffff` |
 | Label Font Family | Font family for form field labels | Text | `Arial, Helvetica, sans-serif` |
 | Label Font Size | Font size for form field labels | Text | `1.1rem` |
-| Label Font Color | Color of form field labels | Color | `#000080` |
+| Label Font Colour | Colour of form field labels | Colour | `#000080` |
 | Input Font Family | Font family for form input fields | Text | `Arial, Helvetica, sans-serif` |
 | Input Font Size | Font size for form input fields | Text | `1.1rem` |
-| Input Font Color | Color of text in form input fields | Color | `#000080` |
+| Input Font Colour | Colour of text in form input fields | Colour | `#000080` |
 
 ### Payment Features
 
@@ -143,7 +143,7 @@ The plugin provides logging for key events and errors, which can be found in `st
 |---|---|---|:---:|
 | Create Payment | `POST` | `/v2/payments` | ✅ Implemented |
 | Refund Payment | `POST` | `/v2/payments/{id}/refund` | ✅ Implemented |
-| Authorize Payment | `POST` | `/v2/payments/preauth` | ✅ Implemented |
+| Authorise Payment | `POST` | `/v2/payments/preauth` | ✅ Implemented |
 | Capture Payment | `POST` | `/v2/payments/{id}/capture` | ✅ Implemented |
 
 ## 📚 Documentation

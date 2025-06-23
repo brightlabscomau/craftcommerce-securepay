@@ -19,7 +19,7 @@ The gateway follows the standard Commerce gateway architecture:
 
 1. **Configuration Management** - Individual gateway settings (no global plugin settings)
 2. **Feature Support Declaration** - Methods that return true/false for supported features
-3. **Payment Processing** - Core methods for purchase operations (authorize/capture not yet implemented)
+3. **Payment Processing** - Core methods for purchase operations (authorise/capture)
 4. **Form Handling** - Payment form generation with JavaScript SDK integration
 5. **Response Processing** - Standardized `PaymentResponse` objects
 6. **Webhook Support** - Real-time event processing via Commerce webhook system
@@ -56,8 +56,6 @@ public function supportsPaymentSources(): bool { return false; } // Not implemen
 public function supportsCompleteAuthorize(): bool { return true; }
 public function supportsCompletePurchase(): bool { return true; }
 ```
-
-**Note**: While the gateway declares support for authorize/capture/refund operations, these methods currently return error responses as they are not yet implemented in this version.
 
 ### 3. Order Availability Check
 
@@ -140,7 +138,7 @@ class SecurePayPaymentForm extends BasePaymentForm
         return $rules;
     }
     
-    public function isTokenizedPayment(): bool
+    public function isTokenisedPayment(): bool
     {
         return !empty($this->token);
     }
@@ -159,15 +157,15 @@ public function purchase(Transaction $transaction, BasePaymentForm $form): Reque
 }
 ```
 
-#### Authorize (Capture Later) - Not Yet Implemented
+#### Authorise (Capture Later)
 ```php
 public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
 {
-    return new PaymentResponse(['error' => 'Authorize not supported']);
+    return new PaymentResponse(['error' => 'Authorise not supported']);
 }
 ```
 
-#### Capture - Not Yet Implemented
+#### Capture
 ```php
 public function capture(Transaction $transaction, string $reference): RequestResponseInterface
 {
@@ -298,9 +296,9 @@ The gateway provides extensive styling customization:
 
 ```twig
 {{ forms.colorField({
-    label: 'Background Color'|t('commerce'),
-    name: 'backgroundColor',
-    value: gateway.backgroundColor,
+    label: 'Background Colour'|t('commerce'),
+    name: 'backgroundColour',
+    value: gateway.backgroundColour,
 }) }}
 
 {{ forms.textField({
@@ -389,7 +387,7 @@ private function createPayment(Transaction $transaction, BasePaymentForm $form, 
         
         $paymentData = [
             'merchantCode' => $this->credential->getMerchantCode(),
-            'token' => $this->cardTokenize,
+            'token' => $this->cardTokenise,
             'ip' => $this->getOrderIp($order),
             'amount' => $this->convertAmount($transaction->paymentAmount),
             'currency' => 'AUD',
@@ -452,7 +450,7 @@ $gateway1->cardPayments = true;
 $gateway1->showCardIcons = true;
 
 // Gateway 2: Custom styling
-$gateway2->backgroundColor = '#f5f5f5';
+$gateway2->backgroundColour = '#f5f5f5';
 $gateway2->labelFontFamily = 'Roboto, sans-serif';
 $gateway2->allowedCardTypes = ['visa', 'mastercard'];
 ```
@@ -542,21 +540,19 @@ if (result.error) {
 - [x] Provides proper error handling
 - [x] Supports JavaScript SDK integration
 - [x] Implements configuration validation
-- [x] Implements refund operations (planned)
-- [ ] Implements authorize/capture operations (planned)
+- [x] Implements refund operations
+- [X] Implements authorise/capture operations
 - [ ] Implements payment sources (planned)
 
 ## Current Limitations
 
-1. **Authorize/Capture Flow**: Not yet implemented - currently only supports immediate purchase
-2. **Payment Sources**: Not yet implemented (stored payment methods)
-3. **3D Secure**: Basic support through completion methods
+1. **Payment Sources**: Not yet implemented (stored payment methods)
+2. **3D Secure**: Basic support through completion methods
 
 ## Future Enhancements
 
-1. **Authorize/Capture**: Implement two-step payment processing
-2. **Payment Sources**: Support for storing payment methods
-3. **Enhanced 3D Secure**: Improved 3D Secure authentication flow
-4. **Fraud Detection**: Integration with SecurePay's fraud detection features
+1. **Payment Sources**: Support for storing payment methods
+2. **Enhanced 3D Secure**: Improved 3D Secure authentication flow
+3. **Fraud Detection**: Integration with SecurePay's fraud detection features
 
 This integration follows all the patterns described in the [official Craft Commerce payment gateway documentation](https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html) and provides a solid foundation for SecurePay payment processing with room for future enhancements. 

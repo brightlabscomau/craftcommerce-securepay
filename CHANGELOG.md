@@ -27,9 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Configuration Features
 - Merchant code, client ID, and client secret configuration
 - Sandbox/live environment toggle
-- JavaScript SDK styling customization:
-  - Background color
-  - Font family, size, and color for labels and inputs
+- JavaScript SDK styling customisation:
+  - Background colour
+  - Font family, size, and colour for labels and inputs
   - Allowed card types (Visa, Mastercard, American Express, Diners Club)
   - Card icon display options
 - Card payment enable/disable toggle
@@ -37,9 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Secure API communication using OAuth 2.0
 - PCI DSS compliant payment processing via SecurePay JavaScript SDK
-- Tokenized payment processing (no card data stored locally)
+- Tokenised payment processing (no card data stored locally)
 - Secure credential management with caching
-- Input validation and sanitization
+- Input validation and sanitisation
 
 ### Technical Implementation
 - Extends Craft Commerce BaseGateway following official patterns
@@ -74,3 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unified variable naming convention to camelCase throughout the codebase
 - Standardised method and property naming for better code consistency
 - Improved code readability and maintainability through consistent naming patterns
+
+## [1.2.1] - 2025-06-23
+### Changed
+- Converted all American spellings to Australian spellings throughout the plugin (documentation, user-facing strings, and code comments/labels).

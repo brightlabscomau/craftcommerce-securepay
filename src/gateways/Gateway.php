@@ -57,9 +57,9 @@ class Gateway extends BaseGateway
     public bool $sandboxMode = true;
 
     /**
-     * @var string Background color for JS SDK
+     * @var string Background colour for JS SDK
      */
-    public string $backgroundColor = '#ffffff';
+    public string $backgroundColour = '#ffffff';
 
     /**
      * @var string Label font family for JS SDK
@@ -72,9 +72,9 @@ class Gateway extends BaseGateway
     public string $labelFontSize = '1.1rem';
 
     /**
-     * @var string Label font color for JS SDK
+     * @var string Label font colour for JS SDK
      */
-    public string $labelFontColor = '#000080';
+    public string $labelFontColour = '#000080';
 
     /**
      * @var string Input font family for JS SDK
@@ -87,9 +87,9 @@ class Gateway extends BaseGateway
     public string $inputFontSize = '1.1rem';
 
     /**
-     * @var string Input font color for JS SDK
+     * @var string Input font colour for JS SDK
      */
-    public string $inputFontColor = '#000080';
+    public string $inputFontColour = '#000080';
 
     /**
      * @var array Allowed card types for JS SDK
@@ -116,15 +116,15 @@ class Gateway extends BaseGateway
     private ?Credential $credential = null;
 
     /**
-     * @var string|null Tokenized card token
+     * @var string|null tokenised card token
      */
-    private ?string $cardTokenize = null;
+    private ?string $cardTokenise = null;
     /**
-     * @var string|null Tokenized card Created At
+     * @var string|null tokenised card Created At
      */
     private ?string $cardCreatedAt = null;
     /**
-     * @var string|null Tokenized card Scheme
+     * @var string|null tokenised card Scheme
      */
     private ?string $cardScheme = null;
 
@@ -215,19 +215,19 @@ class Gateway extends BaseGateway
                 clientId: window.securePayConfig.clientId,
                 merchantCode: window.securePayConfig.merchantCode,
                 style: {
-                    backgroundColor: '#" . $this->backgroundColor . "',
+                    backgroundColour: '#" . $this->backgroundColour . "',
                     label: {
                     font: {
                         family: '" . $this->labelFontFamily . "',
                         size: '" . $this->labelFontSize . "',
-                        color: '#" . $this->labelFontColor . "'
+                        color: '#" . $this->labelFontColour . "'
                     }
                     },
                     input: {
                         font: {
                             family: '" . $this->inputFontFamily . "',
                             size: '" . $this->inputFontSize . "',
-                            color: '#" . $this->inputFontColor . "'
+                            color: '#" . $this->inputFontColour . "'
                         }
                     }
                 },
@@ -261,11 +261,11 @@ class Gateway extends BaseGateway
      */
     public function getPaymentFormModel(): BasePaymentForm
     {
-        $this->cardTokenize = Craft::$app->getRequest()->getBodyParam('token');
+        $this->cardTokenise = Craft::$app->getRequest()->getBodyParam('token');
         $this->cardCreatedAt = Craft::$app->getRequest()->getBodyParam('createdAt');
         $this->cardScheme = Craft::$app->getRequest()->getBodyParam('scheme');
         $securePayPaymentForm = new SecurePayPaymentForm();
-        $securePayPaymentForm->token = $this->cardTokenize;
+        $securePayPaymentForm->token = $this->cardTokenise;
         $securePayPaymentForm->createdAt = $this->cardCreatedAt;
         $securePayPaymentForm->scheme = $this->cardScheme;
         return $securePayPaymentForm;
@@ -322,9 +322,10 @@ class Gateway extends BaseGateway
     /**
      * @inheritdoc
      */
-    public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
+    
+     public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
-        return $this->authorizePayment($transaction, $form);
+        return $this->authorisePayment($transaction, $form);
     }
 
     /**
@@ -508,7 +509,7 @@ class Gateway extends BaseGateway
     {
         return [
             'purchase' => Craft::t('commerce', 'Purchase (Immediate Capture)'),
-            'authorize' => Craft::t('commerce', 'Authorize (Capture Later)'),
+            'authorize' => Craft::t('commerce', 'Authorise (Capture Later)'),
         ];
     }
 
@@ -522,13 +523,13 @@ class Gateway extends BaseGateway
             'clientSecret' => 'Client Secret', 
             'merchantCode' => 'Merchant Code',
             'sandboxMode' => 'Sandbox Mode',
-            'backgroundColor' => 'Background Color',
+            'backgroundColour' => 'Background Colour',
             'labelFontFamily' => 'Label Font Family',
             'labelFontSize' => 'Label Font Size',
-            'labelFontColor' => 'Label Font Color',
+            'labelFontColour' => 'Label Font Colour',
             'inputFontFamily' => 'Input Font Family',
             'inputFontSize' => 'Input Font Size',
-            'inputFontColor' => 'Input Font Color',
+            'inputFontColour' => 'Input Font Colour',
             'allowedCardTypes' => 'Allowed Card Types',
             'showCardIcons' => 'Show Card Icons',
             'cardPayments' => 'Card Payments',
@@ -542,7 +543,7 @@ class Gateway extends BaseGateway
     {
         $rules = parent::rules();
         $rules[] = [['clientId', 'clientSecret', 'merchantCode'], 'required'];
-        $rules[] = [['clientId', 'clientSecret', 'merchantCode', 'paymentType', 'backgroundColor', 'labelFontFamily', 'labelFontSize', 'labelFontColor', 'inputFontFamily', 'inputFontSize', 'inputFontColor'], 'string'];
+        $rules[] = [['clientId', 'clientSecret', 'merchantCode', 'paymentType', 'backgroundColour', 'labelFontFamily', 'labelFontSize', 'labelFontColour', 'inputFontFamily', 'inputFontSize', 'inputFontColour'], 'string'];
         $rules[] = [['sandboxMode', 'showCardIcons', 'cardPayments'], 'boolean'];
         $rules[] = [['paymentType'], 'in', 'range' => ['purchase', 'authorize']];
         $rules[] = [['allowedCardTypes'], 'each', 'rule' => ['in', 'range' => ['visa', 'mastercard', 'amex', 'diners']]];
@@ -604,7 +605,7 @@ class Gateway extends BaseGateway
             
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
-                'token' => $this->cardTokenize,
+                'token' => $this->cardTokenise,
                 'ip' => $this->_getOrderIp($order),
                 'amount' => $this->_convertAmount($transaction->paymentAmount),
                 'currency' => $this->defaultCurrency, //$transaction->paymentCurrency,
@@ -677,13 +678,13 @@ class Gateway extends BaseGateway
     }
     /**
      * 
-     * Authorize a payment using SecurePay API following Commerce patterns
+     * Authorise a payment using SecurePay API following Commerce patterns
      * @param Transaction $transaction
      * @param BasePaymentForm $form
      * @return RequestResponseInterface
      * @since 1.2.0
      */
-    private function authorizePayment(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
+    private function authorisePayment(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
         try {
             // get order and payment data
@@ -694,7 +695,7 @@ class Gateway extends BaseGateway
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
                 'preAuthType' => 'PRE_AUTH', //PRE_AUTH,INITIAL_AUTH
-                'token' => $this->cardTokenize,
+                'token' => $this->cardTokenise,
                 'ip' => $this->_getOrderIp($order),
                 'amount' => $this->_convertAmount($transaction->paymentAmount),
                 'currency' => $this->defaultCurrency, //$transaction->paymentCurrency,
@@ -719,13 +720,13 @@ class Gateway extends BaseGateway
               }
             return new SecurePayResponse($createPreAuthResult);
         } catch (\Exception $e) {
-            Craft::error('SecurePay authorize payment error: ' . $e->getMessage(), __METHOD__);
+            Craft::error('SecurePay authorise payment error: ' . $e->getMessage(), __METHOD__);
             return new SecurePayResponse(['error' => $e->getMessage()]);
         }
     }
     /**
      * 
-     * Authorize a payment using SecurePay API following Commerce patterns
+     * Authorise a payment using SecurePay API following Commerce patterns
      * @param Transaction $transaction
      * @param BasePaymentForm $form
      * @return RequestResponseInterface

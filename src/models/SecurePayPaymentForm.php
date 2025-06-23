@@ -7,7 +7,7 @@ use craft\commerce\models\payments\BasePaymentForm;
 /**
  * SecurePay Payment Form
  *
- * Supports JavaScript SDK tokenization
+ * Supports JavaScript SDK tokenisation
  * following Craft Commerce payment gateway patterns
  *
  * @author Brightlabs
@@ -46,9 +46,9 @@ class SecurePayPaymentForm extends BasePaymentForm
      */
 
     /**
-     * Check if this is a tokenized payment
+     * Check if this is a tokenised payment
      */
-    public function isTokenizedPayment(): bool
+    public function isTokenisedPayment(): bool
     {
         return !empty($this->token);
     }
@@ -58,8 +58,8 @@ class SecurePayPaymentForm extends BasePaymentForm
      */
     public function getPaymentMethodDescription(): string
     {
-        if ($this->isTokenizedPayment()) {
-            return 'Credit Card (Tokenized)';
+        if ($this->isTokenisedPayment()) {
+            return 'Credit Card (Tokenised)';
         }
         return 'Credit Card';
     }

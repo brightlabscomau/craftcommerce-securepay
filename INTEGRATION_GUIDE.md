@@ -2,13 +2,13 @@
 
 This guide provides comprehensive instructions for integrating the SecurePay payment gateway with Craft Commerce, following the [official SecurePay API documentation](https://auspost.com.au/payments/docs/securepay/?javascript#integrating-with-securepay).
 
-**Plugin**: `brightlabs/craft-securepay` v1.2.0  
+**Plugin**: `brightlabs/craft-securepay` v1.2.1  
 **Developer**: [Brightlabs](https://brightlabs.com.au/)  
 **API**: SecurePay API v2 with OAuth 2.0
 
 ## Overview
 
-This plugin implements the SecurePay API v2 using the **JavaScript SDK Integration** for enhanced security and PCI compliance. It tokenizes card data on the client-side, ensuring that no sensitive payment information ever touches your server.
+This plugin implements the SecurePay API v2 using the **JavaScript SDK Integration** for enhanced security and PCI compliance. It tokenises card data on the client-side, ensuring that no sensitive payment information ever touches your server.
 
 ## Integration Architecture
 
@@ -26,7 +26,7 @@ Frontend (JavaScript SDK) ←→ SecurePay Servers (Tokenization)
 The JavaScript SDK integration follows the SecurePay official documentation for secure client-side tokenization. The plugin handles the entire process automatically.
 
 ### Features
-- **PCI Compliance**: Card data is tokenized and never touches your server
+- **PCI Compliance**: Card data is Tokenised and never touches your server
 - **Enhanced Security**: Client-side tokenization
 - **Real-time Validation**: The SDK provides instant card validation in the browser
 - **Customizable UI**: The payment form can be styled from the gateway settings in the Craft CP
@@ -55,8 +55,8 @@ const securePayConfig = {
     baseUrl: 'https://payments-stest.npe.auspost.zone', // Set by sandbox mode toggle
     style: {
         // All styling options are configured in gateway settings
-        backgroundColor: '#ffffff',
-        labelFontColor: '#000080',
+        backgroundColour: '#ffffff',
+        labelFontColour: '#000080',
         // ... and many more
     }
 };
@@ -64,7 +64,7 @@ const securePayConfig = {
 
 #### 1.3 Payment Flow
 1. Customer enters payment details into the secure form rendered by the plugin.
-2. The JavaScript SDK tokenizes the card data on the client-side upon form submission.
+2. The JavaScript SDK tokenises the card data on the client-side upon form submission.
 3. The plugin's JavaScript submits the generated token to Craft Commerce.
 4. The gateway processes the payment with the SecurePay API using the token.
 5. SecurePay returns a response (success or error).
