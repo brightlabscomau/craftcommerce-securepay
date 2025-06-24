@@ -574,7 +574,7 @@ class Gateway extends BaseGateway
                         Craft::error($message, __METHOD__);
 						throw new Exception($message);
 					}
-					$token = $response->_getAccessToken();
+					$token = $response->getAccessToken();
                     // Create credential object (you may need to create this class)
                     return $token;
                    
