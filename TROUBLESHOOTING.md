@@ -2,7 +2,7 @@
 
 This guide helps resolve common issues with the SecurePay payment gateway integration for Craft Commerce.
 
-**Plugin**: `brightlabs/craft-securepay` v1.2.1  
+**Plugin**: `brightlabs/craft-securepay` v1.3.0  
 **Support**: [GitHub Issues](https://github.com/brightlabs/craft-securepay/issues) | Craft Discord/Slack  
 **SecurePay Support**: For issues with your SecurePay account, please contact SecurePay directly.
 
@@ -21,6 +21,7 @@ This guide helps resolve common issues with the SecurePay payment gateway integr
   - Client ID
   - Client Secret
 - [ ] **Sandbox Mode** is set correctly for the environment.
+- [ ] **3D Secure 2.0** is configured as needed (optional but recommended for live).
 
 ### ✅ **3. Order Requirements**
 - [ ] Order has items with a total > $0.
@@ -73,12 +74,36 @@ The plugin caches the authentication token for 24 hours. If you update your Clie
    - Client Secret
 3. Save the gateway.
 
+*Note: If you're in Sandbox Mode, the plugin automatically uses pre-configured test credentials, so you don't need to manually enter them.*
+
 ### ❌ **Issue: "Order has no outstanding balance"**
 
 **Solutions:**
 1. Ensure the cart has items with a price > $0.
 2. Check if the order has already been marked as paid.
 3. Use the debug template below to verify `cart.outstandingBalance` is > 0.
+
+### ❌ **Issue: "3D Secure authentication failing"**
+
+**Solutions:**
+1. **Check 3D Secure Configuration**: Ensure 3D Secure 2.0 is enabled on your SecurePay merchant account.
+2. **Gateway Settings**: Verify that the "3D Secure 2.0" toggle is enabled in your gateway settings.
+3. **Test Cards**: Use test cards that support 3D Secure authentication.
+4. **Browser Support**: Ensure you're using a supported browser for 3D Secure authentication.
+5. **Network Issues**: Check that your server can reach SecurePay's 3D Secure endpoints.
+
+### ❌ **Issue: "Sandbox credentials not working"**
+
+**Solution:**
+The plugin automatically uses pre-configured sandbox credentials when Sandbox Mode is enabled:
+- **Merchant Code**: `5AR0055`
+- **Client ID**: `0oaxb9i8P9vQdXTsn3l5`
+- **Client Secret**: `0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp`
+
+If you're still having issues:
+1. Ensure Sandbox Mode is enabled in your gateway settings.
+2. Clear Craft's caches: `php craft cache/flush-all`.
+3. Check that the credentials are being automatically populated in the gateway settings.
 
 ---
 
@@ -98,6 +123,7 @@ Look for messages like:
 - "SecurePay unavailable: Missing credentials"
 - "SecurePay unavailable: Gateway is disabled"
 - "SecurePay payment error: ..."
+- "SecurePay 3D Secure error: ..."
 
 ### Step 2: Use the Debug Template
 
@@ -139,6 +165,8 @@ Add this to your main checkout template for detailed debugging information.
                     <li>Available: {{ gateway.availableForUseWithOrder(cart) ? '✅ Yes' : '❌ No' }}</li>
                     <li>Credentials: {{ (gateway.clientId and gateway.clientSecret and gateway.merchantCode) ? '✅ Complete' : '❌ Missing' }}</li>
                     <li>Environment: {{ gateway.sandboxMode ? 'Sandbox' : 'Live' }}</li>
+                    <li>3D Secure: {{ gateway.threeDSecure ? '✅ Enabled' : '❌ Disabled' }}</li>
+                    <li>Card Payments: {{ gateway.cardPayments ? '✅ Enabled' : '❌ Disabled' }}</li>
                 </ul>
             </div>
         {% endfor %}
@@ -186,6 +214,33 @@ public function availableForUseWithOrder(Order $order): bool
 ```
 
 **Important**: Remember to remove any modifications to vendor files after you are done debugging, as they will be overwritten by Composer updates.
+
+## 3D Secure Troubleshooting
+
+### Common 3D Secure Issues
+
+1. **Authentication Not Triggered**
+   - Ensure 3D Secure 2.0 is enabled in your gateway settings
+   - Verify 3D Secure is enabled on your SecurePay merchant account
+   - Use test cards that support 3D Secure authentication
+
+2. **Authentication Failing**
+   - Check browser console for JavaScript errors
+   - Ensure your server can reach SecurePay's 3D Secure endpoints
+   - Verify SSL certificate is valid and properly configured
+
+3. **User Experience Issues**
+   - Test the authentication flow in different browsers
+   - Ensure the 3D Secure challenge window displays properly
+   - Check that authentication completion redirects correctly
+
+### 3D Secure Testing
+
+When testing 3D Secure 2.0:
+- Use test cards that trigger authentication challenges
+- Follow the authentication flow completely
+- Test both successful and failed authentication scenarios
+- Verify that transaction status updates correctly after authentication
 
 ---
 

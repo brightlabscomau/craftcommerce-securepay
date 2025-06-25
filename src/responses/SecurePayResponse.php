@@ -31,7 +31,7 @@ class SecurePayResponse implements RequestResponseInterface
     public function isSuccessful(): bool
     {
         // SecurePay API v2 response patterns
-        if (!isset($this->data['error']) && isset($this->data['status'])) {
+        if (!isset($this->data['errors']) && isset($this->data['status'])) {
             return $this->data['status'] === 'paid';
         }
 
@@ -125,6 +125,7 @@ class SecurePayResponse implements RequestResponseInterface
      */
     public function getMessage(): string
     {
+        
         $message = '';
         if (isset($this->data['errors'])) {
             if(is_array($this->data['errors'])){

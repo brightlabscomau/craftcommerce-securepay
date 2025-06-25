@@ -5,7 +5,7 @@
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
 **Plugin Package**: `brightlabs/craft-securepay`  
-**Version**: 1.2.1 
+**Version**: 1.3.0
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps
@@ -34,11 +34,23 @@ php craft plugin/install securepay
 
 ### 4. Gateway Configuration
 
+#### Required Settings
 The following settings are **required** for the gateway to function:
 -   **Merchant Code**: Your SecurePay merchant code.
 -   **Client ID**: Your SecurePay API client identifier.
 -   **Client Secret**: Your SecurePay API secret key.
 -   **Sandbox Mode**: Enable for testing, disable for live transactions.
+
+#### Sandbox Mode
+When **Sandbox Mode** is enabled, the plugin automatically uses pre-configured test credentials:
+- **Merchant Code**: `5AR0055`
+- **Client ID**: `0oaxb9i8P9vQdXTsn3l5`
+- **Client Secret**: `0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp`
+
+This makes testing much easier as you don't need to manually enter test credentials.
+
+#### Security Features
+- **3D Secure 2.0**: Enable this option to activate 3D Secure 2.0 authentication for enhanced security. This requires 3D Secure to be enabled on your SecurePay account.
 
 ### 5. Advanced Configuration (Optional)
 
@@ -52,6 +64,13 @@ The plugin offers extensive styling options for the payment form, allowing you t
     -   **Mastercard**: `5555555555554444`
     -   **Expiry**: Any future date (e.g., `12/2025`)
     -   **CVV**: Any 3-4 digit number (e.g., `123`)
+
+#### 3D Secure Testing
+If you have enabled 3D Secure 2.0:
+- Test cards may trigger authentication challenges
+- Follow the authentication flow as prompted
+- Use any test authentication code (e.g., `123456`)
+- Test both successful and failed authentication scenarios
 
 ### 7. Going Live
 
@@ -84,9 +103,13 @@ The plugin offers extensive styling options for the payment form, allowing you t
 ✅ **Implemented in v1.2.0**
 - Authorisation and capture workflows for SecurePay gateway
 
+✅ **Implemented in v1.3.0**
+- 3D Secure 2.0 authentication for enhanced security
+- Pre-configured sandbox credentials for easier testing
+- Enhanced error reporting and debugging
+- Optimised credential management
 
 🚧 **Planned for Future Versions**
-- 3D Secure 2.0 authentication
 - Fraud detection integration
 - Apple Pay support
 - Dynamic Currency Conversion (DCC)
@@ -95,4 +118,5 @@ The plugin offers extensive styling options for the payment form, allowing you t
 ## Security Notes
 
 - All API communications use HTTPS and are authenticated with OAuth 2.0.
-- This plugin uses SecurePay's JavaScript SDK to tokenise payment information in the browser, ensuring no sensitive card data ever touches your server. This is essential for PCI DSS SAQ-A compliance. 
+- This plugin uses SecurePay's JavaScript SDK to tokenise payment information in the browser, ensuring no sensitive card data ever touches your server. This is essential for PCI DSS SAQ-A compliance.
+- 3D Secure 2.0 provides additional authentication layers for high-risk transactions, enhancing security and reducing fraud. 

@@ -23,6 +23,7 @@ The gateway follows the standard Commerce gateway architecture:
 4. **Form Handling** - Payment form generation with JavaScript SDK integration
 5. **Response Processing** - Standardized `PaymentResponse` objects
 6. **Webhook Support** - Real-time event processing via Commerce webhook system
+7. **3D Secure Integration** - Enhanced authentication flow for high-risk transactions
 
 ## Integration Points
 
@@ -90,7 +91,7 @@ public function availableForUseWithOrder(Order $order): bool
 
 **Gateway Selection**: Commerce automatically presents available gateways based on `availableForUseWithOrder()` results.
 
-**Configuration**: Store managers can configure multiple SecurePay gateways with different settings (sandbox vs live, different merchant codes, etc.).
+**Configuration**: Store managers can configure multiple SecurePay gateways with different settings (sandbox vs live, different merchant codes, 3D Secure settings, etc.).
 
 ### 2. Payment Form Generation
 
@@ -161,7 +162,7 @@ public function purchase(Transaction $transaction, BasePaymentForm $form): Reque
 ```php
 public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
 {
-    return new PaymentResponse(['error' => 'Authorise not supported']);
+    return $this->authorisePayment($transaction, $form);
 }
 ```
 
@@ -169,7 +170,7 @@ public function authorize(Transaction $transaction, BasePaymentForm $form): Requ
 ```php
 public function capture(Transaction $transaction, string $reference): RequestResponseInterface
 {
-    return new PaymentResponse(['error' => 'Capture not supported']);
+    return $this->capturePayment($transaction, $reference);
 }
 ```
 
@@ -212,6 +213,11 @@ class PaymentResponse implements RequestResponseInterface
 - `isProcessing()` returns `true`
 - Transaction marked as pending
 - Webhook or completion endpoint updates status
+
+**3D Secure Authentication**:
+- Enhanced authentication flow for high-risk transactions
+- Automatic challenge flow when required by card issuer
+- Seamless integration with payment process
 
 ## JavaScript SDK Integration
 
@@ -288,11 +294,18 @@ The gateway provides a comprehensive configuration interface following Commerce 
     name: 'sandboxMode',
     on: gateway.sandboxMode,
 }) }}
+
+{{ forms.lightswitchField({
+    label: '3D Secure 2.0'|t('commerce'),
+    name: 'threeDSecure',
+    on: gateway.threeDSecure,
+    instructions: 'Enable 3D Secure 2.0 authentication for enhanced security. Requires 3DS to be enabled on your SecurePay account.'|t('commerce'),
+}) }}
 ```
 
 ### 2. JavaScript SDK Styling Options
 
-The gateway provides extensive styling customization:
+The gateway provides extensive styling customisation:
 
 ```twig
 {{ forms.colorField({
@@ -325,6 +338,7 @@ The gateway provides extensive styling customization:
 Commerce automatically provides:
 - Transaction listing and details
 - Payment status tracking
+- 3D Secure authentication status
 
 ## Webhook Integration
 
@@ -366,6 +380,7 @@ private function handleWebhookEvent(array $data): void
 {
     // Implementation for processing webhook events
     // Updates transaction status based on SecurePay events
+    // Handles 3D Secure authentication status updates
 }
 ```
 
@@ -397,6 +412,11 @@ private function createPayment(Transaction $transaction, BasePaymentForm $form, 
             $paymentData['orderId'] = (string) $order->id;
         }
 
+        // Add 3D Secure configuration if enabled
+        if ($this->threeDSecure) {
+            $paymentData['threeDSecure'] = true;
+        }
+
         // Create payment request
         $createPaymentRequest = new CreatePaymentRequest($this->credential->isLive(), $this->credential, $paymentData);
         $create_payment_result = $createPaymentRequest->execute()->toArray();
@@ -411,9 +431,21 @@ private function createPayment(Transaction $transaction, BasePaymentForm $form, 
 
 ### 2. Authentication and Credential Management
 
-The gateway implements token-based authentication with caching:
+The gateway implements token-based authentication with caching and pre-configured sandbox credentials:
 
 ```php
+public function __construct($config = [])
+{
+    parent::__construct($config);
+    if($this->sandboxMode){
+        $this->merchantCode = '5AR0055';
+        $this->clientId = '0oaxb9i8P9vQdXTsn3l5';
+        $this->clientSecret = '0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp';
+    }
+    // get credential and SecurePay Authentication
+    $this->getCredential();
+}
+
 public function getCredential()
 {
     if ($this->credential === null) {
@@ -436,8 +468,8 @@ public function getCredential()
 
 Store managers can configure multiple SecurePay gateways:
 
-- **Live Gateway**: Production credentials, purchase mode
-- **Staging Gateway**: Sandbox credentials, purchase mode  
+- **Live Gateway**: Production credentials, purchase mode, 3D Secure enabled
+- **Staging Gateway**: Sandbox credentials, purchase mode, 3D Secure disabled
 - **Testing Gateway**: Test credentials, all features enabled
 
 ### 2. Feature Toggles
@@ -448,11 +480,13 @@ Each gateway can be configured independently:
 // Gateway 1: Basic card processing
 $gateway1->cardPayments = true;
 $gateway1->showCardIcons = true;
+$gateway1->threeDSecure = false;
 
-// Gateway 2: Custom styling
+// Gateway 2: Enhanced security with 3D Secure
 $gateway2->backgroundColour = '#f5f5f5';
 $gateway2->labelFontFamily = 'Roboto, sans-serif';
 $gateway2->allowedCardTypes = ['visa', 'mastercard'];
+$gateway2->threeDSecure = true;
 ```
 
 ## Error Handling
@@ -505,6 +539,7 @@ if (result.error) {
 - Use HTTPS for all API communications
 - Sanitize logged data (never log sensitive payment info)
 - Implement proper error handling
+- Enable 3D Secure 2.0 for high-risk transactions
 
 ### 2. Performance
 - Cache access tokens appropriately (24-hour cache implemented)
@@ -517,12 +552,14 @@ if (result.error) {
 - Show processing states
 - Handle network failures gracefully
 - Support form pre-population
+- Guide users through 3D Secure authentication
 
 ### 4. Testing
 - Test purchase flow (primary supported operation)
 - Verify webhook handling
 - Test error conditions
 - Validate form submissions
+- Test 3D Secure authentication flows
 
 ## Integration Checklist
 
@@ -541,18 +578,17 @@ if (result.error) {
 - [x] Supports JavaScript SDK integration
 - [x] Implements configuration validation
 - [x] Implements refund operations
-- [X] Implements authorise/capture operations
+- [x] Implements authorise/capture operations
+- [x] Implements 3D Secure 2.0 authentication
 - [ ] Implements payment sources (planned)
 
 ## Current Limitations
 
 1. **Payment Sources**: Not yet implemented (stored payment methods)
-2. **3D Secure**: Basic support through completion methods
 
 ## Future Enhancements
 
 1. **Payment Sources**: Support for storing payment methods
-2. **Enhanced 3D Secure**: Improved 3D Secure authentication flow
-3. **Fraud Detection**: Integration with SecurePay's fraud detection features
+2. **Fraud Detection**: Integration with SecurePay's fraud detection features
 
-This integration follows all the patterns described in the [official Craft Commerce payment gateway documentation](https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html) and provides a solid foundation for SecurePay payment processing with room for future enhancements. 
+This integration follows all the patterns described in the [official Craft Commerce payment gateway documentation](https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html) and provides a solid foundation for SecurePay payment processing with enhanced security through 3D Secure 2.0. 

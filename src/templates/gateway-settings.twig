@@ -177,6 +177,26 @@
 
 <div class="field">
     <div class="heading">
+        <h2>{{ 'Security Features'|t('commerce') }}</h2>
+    </div>
+    <div class="instructions">
+        <p>{{ 'Configure additional security features provided by SecurePay.'|t('commerce') }}</p>
+    </div>
+</div>
+
+{{ forms.lightswitchField({
+    label: '3D Secure 2.0'|t('commerce'),
+    id: 'threeDSecure',
+    name: 'threeDSecure',
+    on: gateway.threeDSecure,
+    instructions: 'Enable 3D Secure 2.0 authentication for enhanced security. Requires 3DS to be enabled on your SecurePay account.'|t('commerce'),
+}) }}
+
+<hr>
+
+
+<div class="field">
+    <div class="heading">
         <h2>{{ 'Payment Features'|t('commerce') }}</h2>
     </div>
     <div class="instructions">

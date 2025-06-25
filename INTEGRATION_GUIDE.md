@@ -2,13 +2,13 @@
 
 This guide provides comprehensive instructions for integrating the SecurePay payment gateway with Craft Commerce, following the [official SecurePay API documentation](https://auspost.com.au/payments/docs/securepay/?javascript#integrating-with-securepay).
 
-**Plugin**: `brightlabs/craft-securepay` v1.2.1  
+**Plugin**: `brightlabs/craft-securepay` v1.3.0 
 **Developer**: [Brightlabs](https://brightlabs.com.au/)  
 **API**: SecurePay API v2 with OAuth 2.0
 
 ## Overview
 
-This plugin implements the SecurePay API v2 using the **JavaScript SDK Integration** for enhanced security and PCI compliance. It tokenises card data on the client-side, ensuring that no sensitive payment information ever touches your server.
+This plugin implements the SecurePay API v2 using the **JavaScript SDK Integration** for enhanced security and PCI compliance. It tokenises card data on the client-side, ensuring that no sensitive payment information ever touches your server. Version 1.3.0 includes full 3D Secure 2.0 implementation for enhanced security.
 
 ## Integration Architecture
 
@@ -16,6 +16,8 @@ This plugin implements the SecurePay API v2 using the **JavaScript SDK Integrati
 Frontend (JavaScript SDK) ←→ SecurePay Servers (Tokenization)
          ↓ (Token)
    Craft Commerce ←→ SecurePay API v2 (REST API Payment)
+         ↓ (3D Secure if required)
+   3D Secure Challenge ←→ Card Issuer ←→ Customer Authentication
          ↓
    Backend Processing (Order Completion)
 ```
@@ -30,6 +32,7 @@ The JavaScript SDK integration follows the SecurePay official documentation for 
 - **Enhanced Security**: Client-side tokenization
 - **Real-time Validation**: The SDK provides instant card validation in the browser
 - **Customizable UI**: The payment form can be styled from the gateway settings in the Craft CP
+- **3D Secure 2.0**: Full implementation of 3D Secure 2.0 authentication
 
 ### Implementation
 
@@ -58,7 +61,8 @@ const securePayConfig = {
         backgroundColour: '#ffffff',
         labelFontColour: '#000080',
         // ... and many more
-    }
+    },
+    threeDSecure: true // If enabled in gateway settings
 };
 ```
 
@@ -67,8 +71,9 @@ const securePayConfig = {
 2. The JavaScript SDK tokenises the card data on the client-side upon form submission.
 3. The plugin's JavaScript submits the generated token to Craft Commerce.
 4. The gateway processes the payment with the SecurePay API using the token.
-5. SecurePay returns a response (success or error).
-6. Commerce completes the order or displays an error message.
+5. If 3D Secure 2.0 is enabled and required, the customer completes authentication.
+6. SecurePay returns a response (success or error).
+7. Commerce completes the order or displays an error message.
 
 #### 1.4 Craft Commerce Integration
 You only need to output the payment form in your checkout template. The plugin handles the rest.
@@ -94,7 +99,7 @@ You only need to output the payment form in your checkout template. The plugin h
 ## 2. REST API Integration
 
 ### Authentication
-The plugin uses the OAuth 2.0 Client Credentials flow and automatically caches the access token for 24 hours to improve performance.
+The plugin uses the OAuth 2.0 Client Credentials flow and automatically caches the access token for 24 hours to improve performance. When in Sandbox Mode, the plugin automatically uses pre-configured test credentials.
 
 ```php
 // Authentication is handled automatically by the plugin
@@ -120,16 +125,40 @@ Content-Type: application/json
     "ip": "123.123.123.123",
     "amount": 2500, // $25.00 in cents
     "currency": "AUD",
-    "orderId": "12345"
+    "orderId": "12345",
+    "threeDSecure": true // If enabled in gateway settings
 }
 ```
 
+## 3. 3D Secure 2.0 Integration
+
+### Overview
+Version 1.3.0 includes full 3D Secure 2.0 implementation for enhanced security and fraud prevention.
+
+### Features
+- **Enhanced Authentication**: Additional authentication layer for high-risk transactions
+- **Automatic Challenge Flow**: Seamless integration with the payment process
+- **Configurable**: Enable/disable per gateway instance
+- **Browser Support**: Works with all major browsers that support 3D Secure 2.0
+
+### Implementation
+3D Secure 2.0 is automatically handled by the SecurePay JavaScript SDK when enabled in your gateway settings. The authentication flow is transparent to the customer and integrates seamlessly with the payment process.
+
+### Configuration
+Enable 3D Secure 2.0 in your gateway settings:
+1. Go to **Commerce → System Settings → Gateways**
+2. Edit your SecurePay gateway
+3. Enable the "3D Secure 2.0" toggle
+4. Save the gateway
+
+**Note**: 3D Secure 2.0 must be enabled on your SecurePay merchant account for this feature to work.
 
 ## 7. Testing
 
 ### Test Environment
 - **Sandbox URL**: `https://payments-stest.npe.auspost.zone`
 - **OAuth URL**: `https://welcome.api2.sandbox.auspost.com.au/oauth/token`
+- **Pre-configured Credentials**: Automatically used when Sandbox Mode is enabled
 
 ### Test Cards
 
@@ -143,7 +172,12 @@ Content-Type: application/json
 - **Insufficient Funds**: `4000000000009995`
 - **Expired Card**: `4000000000000069`
 
-**Note**: 3D Secure and other advanced features are not yet implemented in this version of the plugin.
+### 3D Secure Testing
+When 3D Secure 2.0 is enabled:
+- Test cards may trigger authentication challenges
+- Follow the authentication flow as prompted
+- Use any test authentication code (e.g., `123456`)
+- Test both successful and failed authentication scenarios
 
 ### Test Data
 - **Expiry**: Any future date (e.g., `12/2025`)
@@ -156,9 +190,10 @@ Content-Type: application/json
 1. ✅ Obtain live API credentials from SecurePay.
 2. ✅ Create a new SecurePay gateway configuration in Craft Commerce with the live credentials.
 3. ✅ Disable "Sandbox Mode" in the gateway settings. The plugin will automatically use production URLs.
-4. ✅ Ensure your website has a valid SSL/TLS certificate (HTTPS is required).
-5. ✅ Test the live gateway with small transactions.
-6. ✅ Monitor transaction logs in the Craft Commerce control panel.
+4. ✅ Enable "3D Secure 2.0" if desired for enhanced security.
+5. ✅ Ensure your website has a valid SSL/TLS certificate (HTTPS is required).
+6. ✅ Test the live gateway with small transactions.
+7. ✅ Monitor transaction logs in the Craft Commerce control panel.
 
 ### Production URLs
 The plugin automatically switches to these URLs when "Sandbox Mode" is disabled:
@@ -170,6 +205,7 @@ The plugin automatically switches to these URLs when "Sandbox Mode" is disabled:
 ### Transaction Monitoring
 - Monitor success/failure rates in the Craft Commerce control panel under `Commerce > Transactions`.
 - Review transaction details for any error messages returned by SecurePay.
+- Check 3D Secure authentication status for transactions where applicable.
 
 ### Logging Best Practices
 The plugin logs important events and errors. You can find these logs in your `storage/logs` directory.
@@ -179,6 +215,9 @@ Craft::info('CreatePaymentResponse Response: {"status":"paid", ...}', __METHOD__
 
 // Example of an error log from the plugin
 Craft::error('SecurePay payment error: Invalid token', __METHOD__);
+
+// Example of a 3D Secure log
+Craft::info('3D Secure authentication completed successfully', __METHOD__);
 ```
 
 ## 10. Support and Resources
@@ -186,6 +225,7 @@ Craft::error('SecurePay payment error: Invalid token', __METHOD__);
 ### Official Documentation
 - [SecurePay API Documentation](https://auspost.com.au/payments/docs/securepay/)
 - [JavaScript SDK Reference](https://auspost.com.au/payments/docs/securepay/?javascript#javascript-sdk)
+- [3D Secure 2.0 Documentation](https://auspost.com.au/payments/docs/securepay/?javascript#securepay-api-3d-secure-2)
 
 ### Support Channels
 - For issues with the plugin itself, please open an issue on the [GitHub repository](https://github.com/brightlabs/craft-securepay/issues).
@@ -198,16 +238,26 @@ Craft::error('SecurePay payment error: Invalid token', __METHOD__);
    - Double-check that your Merchant Code, Client ID, and Client Secret are correct in the gateway settings.
    - Ensure you are using the correct environment (Sandbox/Live) that matches your credentials.
    - Check for firewall or network issues blocking requests to SecurePay's API.
-
 2. **Payment Form Not Appearing**
    - Ensure the gateway is enabled and available for the current cart/order.
    - Check your browser's developer console for any JavaScript errors.
    - Verify that your Twig template is correctly calling `gateway.getPaymentFormHtml()`.
 
-3. **Transactions Failing**
+3. **3D Secure Authentication Issues**
+   - Verify 3D Secure 2.0 is enabled on your SecurePay merchant account.
+   - Check that the "3D Secure 2.0" toggle is enabled in your gateway settings.
+   - Ensure your server can reach SecurePay's 3D Secure endpoints.
+   - Test with cards that support 3D Secure authentication.
+
+4. **Transactions Failing**
    - Check the transaction details in Craft Commerce for specific error messages from SecurePay.
    - Ensure the currency being used is supported by your SecurePay account (currently hardcoded to AUD).
    - Test with valid test card numbers to rule out card-specific issues.
+
+5. **Sandbox Credentials Not Working**
+   - The plugin automatically uses pre-configured sandbox credentials when Sandbox Mode is enabled.
+   - Clear Craft's caches if you're experiencing issues: `php craft cache/flush-all`.
+   - Verify that Sandbox Mode is enabled in your gateway settings.
 
 ## 11. Security Best Practices
 

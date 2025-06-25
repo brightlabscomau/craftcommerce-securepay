@@ -9,6 +9,7 @@ use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
 use craft\commerce\models\Transaction;
 use craft\commerce\elements\Order;
+use craft\commerce\Plugin as Commerce;
 use craft\helpers\Json;
 use brightlabs\securepay\models\SecurePayPaymentForm;
 use brightlabs\securepay\responses\SecurePayResponse;
@@ -22,6 +23,7 @@ use SecurePayApi\Request\CardPayment\CreatePaymentRequest;
 use SecurePayApi\Request\CardPayment\RefundPaymentRequest;
 use SecurePayApi\Request\CardPayment\CreatePreAuthRequest;
 use SecurePayApi\Request\CardPayment\CapturePreAuthRequest;
+use SecurePayApi\Request\CardPayment\InitiatePaymentOrderRequest;
 /**
  * SecurePay Gateway
  *
@@ -64,7 +66,7 @@ class Gateway extends BaseGateway
     /**
      * @var string Label font family for JS SDK
      */
-    public string $labelFontFamily = 'Arial, Helvetica, sans-serif';
+    public string $labelFontFamily = 'Helvetica, sans-serif';
 
     /**
      * @var string Label font size for JS SDK
@@ -79,7 +81,7 @@ class Gateway extends BaseGateway
     /**
      * @var string Input font family for JS SDK
      */
-    public string $inputFontFamily = 'Arial, Helvetica, sans-serif';
+    public string $inputFontFamily = 'Helvetica, sans-serif';
 
     /**
      * @var string Input font size for JS SDK
@@ -107,6 +109,10 @@ class Gateway extends BaseGateway
     public bool $cardPayments = true;
 
     /**
+     * @var bool
+     */
+    public bool $threeDSecure = false;
+    /**
      * @var int Token expiration timestamp
      */
     private int $tokenExpiresAt = 0;
@@ -129,8 +135,32 @@ class Gateway extends BaseGateway
     private ?string $cardScheme = null;
 
     private string $defaultCurrency = 'AUD';
+
+    private ?Order $order = null;
+
+    private int $maxEmailLength = 254;
+
+    private int $maxAddressFieldLength = 50;
+
+    private int $maxZipCodeLength = 16;
     // Public Methods
     // =========================================================================
+
+    /**
+     * @inheritdoc
+     * Set the credentials for the gateway in sandbox mode
+     */
+    public function __construct($config = [])
+    {
+        parent::__construct($config);
+        if($this->sandboxMode){
+            $this->merchantCode = '5AR0055';
+            $this->clientId = '0oaxb9i8P9vQdXTsn3l5';
+            $this->clientSecret = '0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp';
+        }
+        // get credential and SecurePay Authentication
+        $this->getCredential();
+    }
 
     /**
      * @inheritdoc
@@ -164,7 +194,7 @@ class Gateway extends BaseGateway
         ];
 
         $params = array_merge($defaults, $params);
-
+        
         $view = Craft::$app->getView();
 
         $previousMode = $view->getTemplateMode();
@@ -185,37 +215,113 @@ class Gateway extends BaseGateway
      */
     private function registerJavaScriptSDK($view): void
     {
-        $baseUrl = $this->sandboxMode 
-            ? Endpoint::ENDPOINT_API_SANDBOX
-            : Endpoint::ENDPOINT_API_LIVE;
-            
+        
         $jsUrl = $this->sandboxMode 
             ? Endpoint::URL_SANDBOX_SCRIPT
             : Endpoint::URL_LIVE_SCRIPT;
 
+        $jsUrl3DS2 = $this->sandboxMode 
+            ? Endpoint::URL_SANDBOX_3DS2_SCRIPT
+            : Endpoint::URL_LIVE_3DS2_SCRIPT;   
+        
         // Register the SecurePay JavaScript SDK
-        $view->registerScript('', View::POS_END, [
+        $view->registerScript('1', View::POS_END, [
             'src' => $jsUrl,
             'id'  => 'securepay-ui-js'
         ]); 
-        // Initialize SecurePay configuration
-        $config = [
-            'baseUrl' => $baseUrl,
-            'clientId' => $this->clientId,
-            'merchantCode' => $this->merchantCode,
-        ];
+        $js = "";
+        if($this->threeDSecure){
+            $initiatePayment = $this->initiatePayment();
+            Craft::$app->getSession()->set('initiatePayment', $initiatePayment);
+            $billingAddress = $this->order->getBillingAddress();
+            $shippingAddress = $this->order->getShippingAddress();
+            
+            if(!isset($initiatePayment['errors'])){
+                $view->registerScript('', View::POS_END, [
+                    'src' => $jsUrl3DS2,
+                    'id'  => 'securepay-ui-js-3ds2'
+                ]); 
+                $js .= "document.addEventListener('DOMContentLoaded', function() {
+                    var sp3dsConfig = {
+                        clientId: '".$initiatePayment['threedSecureDetails']['providerClientId']."',
+                        iframe: document.getElementById('3ds-v2-challenge-iframe'),
+                        token: '".$initiatePayment['orderToken']."',
+                        simpleToken: '".$initiatePayment['threedSecureDetails']['simpleToken']."',
+                        threeDSSessionId: '".$initiatePayment['threedSecureDetails']['sessionId']."',
+                        onRequestInputData: function(){
+                            cardholderName = document.querySelector('input#cardholderName') ? document.querySelector('input#cardholderName').value : '';
+                            cardToken = document.querySelector('input#cartToken') ? document.querySelector('input#cartToken').value : '';
+                            var requestData = {
+                                'cardTokenInfo':{
+                                    'cardholderName':cardholderName,
+                                    'cardToken':cardToken
+                                },
+                                'accountData':{
+                                    'emailAddress':'".substr($this->order->email, 0, $this->maxEmailLength)."',
+                                },
+                                'billingAddress':{
+                                    'city':'".substr($billingAddress->locality, 0, $this->maxAddressFieldLength)."',
+                                    'state':'".$billingAddress->administrativeArea."',
+                                    'country':'".$billingAddress->countryCode."',
+                                    'zipCode':'".substr($billingAddress->postalCode, 0, $this->maxZipCodeLength)."',
+                                    'streetAddress':'".substr($billingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
+                                    'detailedStreetAddress':'".substr($billingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
+                                    'detailedStreetAddressAdditional':'".substr($billingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
+                                },
+                                'shippingAddress':{
+                                    'city':'".substr($shippingAddress->locality, 0, $this->maxAddressFieldLength)."',
+                                    'state':'".$shippingAddress->administrativeArea."',
+                                    'country':'".$shippingAddress->countryCode."',
+                                    'zipCode':'".substr($shippingAddress->postalCode, 0, $this->maxZipCodeLength)."',
+                                    'streetAddress':'".substr($shippingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
+                                    'detailedStreetAddress':'".substr($shippingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
+                                    'detailedStreetAddressAdditional':'".substr($shippingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
+                                },
+                                'threeDSInfo':{
+                                    'threeDSReqAuthMethodInd':'01'
+                                }
+                            };
+                            console.log(requestData);
+                            return requestData;
+                        },
+                        onThreeDSResultsResponse: async function(response){
+                            if(response.authenticationValue && response.liabilityShiftIndicator == 'Y'){
+                                form.requestSubmit();
+                            }
+                            else{
+                                var errors = {
+                                    'errors': [
+                                        {
+                                            'code': '3DS2_CARD_UNSUPPORTED',
+                                            'detail': 'Card Unsupported for 3D Secure'
+                                        }
+                                    ]
+                                };
+                                displayErrors(errors);
+                            }
+                        },
+                        onThreeDSError: async function(errors){
+                            displayErrors(errors);
+                        }
+                    };
 
-        $js = "
-        window.securePayConfig = " . Json::encode($config) . ";
-                // Initialize SecurePay when DOM is loaded
-                document.addEventListener('DOMContentLoaded', function() {
-                window.mySecurePayUI = new securePayUI.init({
+                    securePayThreedsUI = new window.SecurePayThreedsUI();
+                    securePayThreedsUI = securePayThreedsUI;
+                    securePayThreedsUI.initThreeDS(sp3dsConfig);
+                });";
+            }
+        }
+
+        $js .= "
+        // Initialize SecurePay when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            window.mySecurePayUI = new securePayUI.init({
                 containerId: 'securepay-card-component',
                 scriptId: 'securepay-ui-js',
-                clientId: window.securePayConfig.clientId,
-                merchantCode: window.securePayConfig.merchantCode,
+                clientId: '".$this->clientId."',
+                merchantCode: '".$this->merchantCode."',
                 style: {
-                    backgroundColour: '#" . $this->backgroundColour . "',
+                    backgroundColor: '#" . $this->backgroundColour . "',
                     label: {
                     font: {
                         family: '" . $this->labelFontFamily . "',
@@ -245,15 +351,14 @@ class Gateway extends BaseGateway
                         document.getElementById('cartScheme').value = tokenisedCard.scheme;
                     },
                     onTokeniseError: function(errors) {
-                        console.log(errors);
-                        // error while tokenising card 
+                        errors = typeof errors === 'string' ? JSON.parse(errors) : errors;
+                        //displayErrors(errors);
                     }
                 }
             });
-        });
-        ";
+        });";
 
-        $view->registerJs($js, View::POS_HEAD);
+        $view->registerJs($js, View::POS_END);
     }
 
     /**
@@ -355,7 +460,7 @@ class Gateway extends BaseGateway
      */
     public function completeAuthorize(Transaction $transaction): RequestResponseInterface
     {
-        return new SecurePayResponse(['error' => 'Complete Authorize not supported']);
+        return new SecurePayResponse(['errors' => [['code' => '-1', 'detail' => 'Complete Authorize not supported']]]);
     }
 
     /**
@@ -532,6 +637,7 @@ class Gateway extends BaseGateway
             'inputFontColour' => 'Input Font Colour',
             'allowedCardTypes' => 'Allowed Card Types',
             'showCardIcons' => 'Show Card Icons',
+            'threeDSecure' => '3D Secure',
             'cardPayments' => 'Card Payments',
         ];
     }
@@ -544,7 +650,7 @@ class Gateway extends BaseGateway
         $rules = parent::rules();
         $rules[] = [['clientId', 'clientSecret', 'merchantCode'], 'required'];
         $rules[] = [['clientId', 'clientSecret', 'merchantCode', 'paymentType', 'backgroundColour', 'labelFontFamily', 'labelFontSize', 'labelFontColour', 'inputFontFamily', 'inputFontSize', 'inputFontColour'], 'string'];
-        $rules[] = [['sandboxMode', 'showCardIcons', 'cardPayments'], 'boolean'];
+        $rules[] = [['sandboxMode', 'threeDSecure', 'showCardIcons', 'cardPayments'], 'boolean'];
         $rules[] = [['paymentType'], 'in', 'range' => ['purchase', 'authorize']];
         $rules[] = [['allowedCardTypes'], 'each', 'rule' => ['in', 'range' => ['visa', 'mastercard', 'amex', 'diners']]];
 
@@ -563,7 +669,7 @@ class Gateway extends BaseGateway
 
         if ($this->credential === null) {
             $cache = Craft::$app->getCache();
-            $cache_key = "securepay_token2_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCode . $this->clientId . $this->clientSecret);
+            $cache_key = "securepay_token_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCode . $this->clientId . $this->clientSecret);
             $token = $cache->getOrSet($cache_key, function()  {
                 try {
 					$request = new ClientCredentialsRequest(!$this->sandboxMode, $this->clientId, $this->clientSecret);
@@ -598,8 +704,6 @@ class Gateway extends BaseGateway
     private function createPayment(Transaction $transaction, BasePaymentForm $form, bool $capture): RequestResponseInterface
     {
         try {
-            // get credential and SecurePay Authentication
-            $this->getCredential();
             // get order and payment data
             $order = $transaction->getOrder();
             
@@ -614,26 +718,32 @@ class Gateway extends BaseGateway
             if ($order->id) {
                 $paymentData['orderId'] = (string) $order->id.""; // --> can cause INVALID_ORDER_ID
             }
+
             if($order->customerId && 0){
                 $paymentData['customerCode'] = (string) $order->customerId.""; // --> can cause INVALID_ORDER_ID
             }
-
+            if($this->threeDSecure){
+                $initiatePayment = Craft::$app->getSession()->get('initiatePayment');
+                $paymentData['threeDSecure'] = [
+                    'initiatedOrderId' => $initiatePayment['orderId'],
+                    'liabilityShiftIndicator' => 'Y'
+                ];
+            }
             // Prepare payment data according to SecurePay API documentation
             $createPaymentRequest = new CreatePaymentRequest($this->credential->isLive(),	$this->credential, $paymentData);
-            
-            try {
-                $createPaymentResult = $createPaymentRequest->execute()->toArray();
-                 Craft::info('createPaymentRequest Response: '. json_encode($createPaymentResult),__METHOD__);
+            $createPaymentResult = $createPaymentRequest->execute()->toArray();
 
-              } catch (\Exception $e) {
-                $this->error_message = $e->getMessage();
-                Craft::error('createPaymentRequest ERROR: '. $e->getMessage(), __METHOD__);
-              }
-            return new SecurePayResponse($createPaymentResult);
+            if(isset($createPaymentResult['errors']))
+                Craft::error('createPaymentRequest ERROR: '. json_encode($createPaymentResult),__METHOD__);
+            else
+                Craft::info('createPaymentRequest Response: '. json_encode($createPaymentResult),__METHOD__);
+            
         } catch (\Exception $e) {
-            Craft::error('SecurePay payment error: ' . $e->getMessage(), __METHOD__);
-            return new SecurePayResponse(['error' => $e->getMessage()]);
+            Craft::error('createPaymentRequest ERROR: ' . $e->getMessage(), __METHOD__);
+            $createPaymentResult = ['errors' => [['code' => '-1', 'detail' => $e->getMessage()]]];
         }
+        return new SecurePayResponse($createPaymentResult);
+
     }
     /**
      * 
@@ -647,12 +757,10 @@ class Gateway extends BaseGateway
         try {
             // get order and payment data
             $order = $transaction->getOrder();
-                if($order->currency != $this->defaultCurrency || $transaction->paymentCurrency != $this->defaultCurrency){
+            if($order->currency != $this->defaultCurrency || $transaction->paymentCurrency != $this->defaultCurrency){
                 Craft::error('SecurePay refund payment error: ' . 'Currency mismatch', __METHOD__);
                 return new SecurePayResponse(['status' => 'failed', 'gatewayResponseCode' => '-1', 'gatewayResponseMessage' => 'Only AUD is supported']);
             }
-            // get credential and SecurePay Authentication
-            $this->getCredential();
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
                 'ip' => $this->_getOrderIp($order),
@@ -661,20 +769,19 @@ class Gateway extends BaseGateway
 
             // Prepare payment data according to SecurePay API documentation
             $RefundPaymentRequest = new RefundPaymentRequest($this->credential->isLive(),	$this->credential, $paymentData, $order->id);
+            $refundPaymentResult = $RefundPaymentRequest->execute()->toArray();
             
-            try {
-                $refundPaymentResult = $RefundPaymentRequest->execute()->toArray();
-                 Craft::info('RefundPaymentRequest Response: '. json_encode($refundPaymentResult),__METHOD__);
-
-              } catch (\Exception $e) {
-                $this->error_message = $e->getMessage();
-                Craft::error('RefundPaymentRequest ERROR: '. $e->getMessage(), __METHOD__);
-              }
-            return new SecurePayResponse($refundPaymentResult);
+            if(isset($refundPaymentResult['errors']))
+                Craft::error('RefundPaymentRequest ERROR: '. json_encode($refundPaymentResult),__METHOD__);
+            else
+                Craft::info('RefundPaymentRequest Response: '. json_encode($refundPaymentResult),__METHOD__);
+            
         } catch (\Exception $e) {
-            Craft::error('SecurePay refund payment error: ' . $e->getMessage(), __METHOD__);
-            return new SecurePayResponse(['error' => $e->getMessage()]);
+            Craft::error('RefundPaymentRequest ERROR: ' . $e->getMessage(), __METHOD__);
+            $refundPaymentResult = ['errors' => [['code' => '-1', 'detail' => $e->getMessage()]]];
         }
+        return new SecurePayResponse($refundPaymentResult);
+
     }
     /**
      * 
@@ -689,8 +796,6 @@ class Gateway extends BaseGateway
         try {
             // get order and payment data
             $order = $transaction->getOrder();
-            // get credential and SecurePay Authentication
-            $this->getCredential();
 
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
@@ -706,23 +811,27 @@ class Gateway extends BaseGateway
             if($order->customerId && 0){
                 $paymentData['customerCode'] = (string) $order->customerId.""; // --> can cause INVALID_ORDER_ID
             }
+            if($this->threeDSecure){
+                $initiatePayment = Craft::$app->getSession()->get('initiatePayment');
+                $paymentData['threeDSecure'] = [
+                    'initiatedOrderId' => $initiatePayment['orderId'],
+                    'liabilityShiftIndicator' => 'Y'
+                ];
+            }
             // Prepare payment data according to SecurePay API documentation
             $createPreAuthRequest = new CreatePreAuthRequest($this->credential->isLive(),	$this->credential, $paymentData);
+            $createPreAuthResult = $createPreAuthRequest->execute()->toArray();
+            // check if there are errors in the response
+            if(isset($createPreAuthResult['errors']))
+                Craft::error('CreatePreAuthRequest ERROR: '. json_encode($createPreAuthResult),__METHOD__);
+            else
+                Craft::info('CreatePreAuthRequest Response: '. json_encode($createPreAuthResult),__METHOD__);
             
-            try {
-                $createPreAuthResult = $createPreAuthRequest->execute()->toArray();
-               
-                 Craft::info('CreatePreAuthRequest Response: '. json_encode($createPreAuthResult),__METHOD__);
-
-              } catch (\Exception $e) {
-                $this->error_message = $e->getMessage();
-                Craft::error('CreatePreAuthRequest ERROR: '. $e->getMessage(), __METHOD__);
-              }
-            return new SecurePayResponse($createPreAuthResult);
         } catch (\Exception $e) {
-            Craft::error('SecurePay authorise payment error: ' . $e->getMessage(), __METHOD__);
-            return new SecurePayResponse(['error' => $e->getMessage()]);
+            Craft::error('CreatePreAuthRequest ERROR: ' . $e->getMessage(), __METHOD__);
+            $createPreAuthResult = ['errors' => [['code' => '-1', 'detail' => $e->getMessage()]]];
         }
+        return new SecurePayResponse($createPreAuthResult);
     }
     /**
      * 
@@ -737,9 +846,6 @@ class Gateway extends BaseGateway
         try {
             // get order and payment data
             $order = $transaction->getOrder();
-            // get credential and SecurePay Authentication
-            $this->getCredential();
-
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
                 'ip' => $this->_getOrderIp($order),
@@ -747,21 +853,51 @@ class Gateway extends BaseGateway
             ];
             // Prepare payment data according to SecurePay API documentation
             $capturePreAuthRequest = new CapturePreAuthRequest($this->credential->isLive(),	$this->credential, $paymentData ,$order->id);
+            $capturePreAuthResult = $capturePreAuthRequest->execute()->toArray();
+            // check if there are errors in the response
+            if(isset($capturePreAuthResult['errors']))
+                Craft::error('CapturePreAuthRequest ERROR: '. json_encode($capturePreAuthResult),__METHOD__);
+            else
+                Craft::info('CapturePreAuthRequest Response: '. json_encode($capturePreAuthResult),__METHOD__);
             
-            try {
-                $capturePreAuthResult = $capturePreAuthRequest->execute()->toArray();
-               
-                 Craft::info('CapturePreAuthRequest Response: '. json_encode($capturePreAuthResult),__METHOD__);
-
-              } catch (\Exception $e) {
-                $this->error_message = $e->getMessage();
-                Craft::error('CapturePreAuthRequest ERROR: '. $e->getMessage(), __METHOD__);
-              }
-            return new SecurePayResponse($capturePreAuthResult);
         } catch (\Exception $e) {
-            Craft::error('SecurePay capture payment error: ' . $e->getMessage(), __METHOD__);
-            return new SecurePayResponse(['error' => $e->getMessage()]);
+            Craft::error('CapturePreAuthRequest ERROR: ' . $e->getMessage(), __METHOD__);
+            $capturePreAuthResult = ['errors' => [['code' => '-1', 'detail' => $e->getMessage()]]];
         }
+        return new SecurePayResponse($capturePreAuthResult);
+    }
+    /**
+     * 
+     * Initiate a payment using SecurePay API following Commerce patterns
+     * @return array
+     * @since 1.3.0
+     */
+    private function initiatePayment(): array
+    {
+        try {
+            $this->order = Commerce::getInstance()->getCarts()->getCart();
+            // Safely get the total amount (as a float or integer depending on your setup)
+            $total = $this->order ? $this->order->getTotal() : 0;
+            $paymentData = [
+                'merchantCode' => $this->credential->getMerchantCode(),
+                'ip' => $this->_getOrderIp($this->order),
+                'amount' => $this->_convertAmount($total),
+                'orderType' => $this->threeDSecure ? 'THREED_SECURE' : 'DYNAMIC_CURRENCY_CONVERSION',
+            ];
+            // Prepare payment data according to SecurePay API documentation
+            $initiatePaymentOrderRequest = new InitiatePaymentOrderRequest($this->credential->isLive(),	$this->credential, $paymentData);
+            $initiatePaymentOrderResult = $initiatePaymentOrderRequest->execute()->toArray();
+            // check if there are errors in the response
+            if(isset($initiatePaymentOrderResult['errors']))
+                Craft::error('initiatePaymentOrderRequest ERROR: '. json_encode($initiatePaymentOrderResult),__METHOD__);
+            else
+                Craft::info('initiatePaymentOrderRequest Response: '. json_encode($initiatePaymentOrderResult),__METHOD__);
+            
+        } catch (\Exception $e) {
+            Craft::error('initiatePaymentOrderRequest ERROR: ' . $e->getMessage(), __METHOD__);
+            $initiatePaymentOrderResult = ['errors' => [['code' => '-1', 'detail' => $e->getMessage()]]];
+        }
+        return $initiatePaymentOrderResult;
     }
 
     /**
@@ -826,7 +962,6 @@ class Gateway extends BaseGateway
     public function _getAccessToken(): ?string
     {
         try {
-            $credential = $this->getCredential();
             return $credential['accessToken'] ?? null;
         } catch (\Exception $e) {
             Craft::error('Error getting access token: ' . $e->getMessage(), __METHOD__);

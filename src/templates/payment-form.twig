@@ -1,13 +1,17 @@
 {# @var gateway brightlabs\securepay\gateways\Gateway #}
 {# @var paymentForm brightlabs\securepay\models\SecurePayPaymentForm #}
-{% do view.registerCss("
-#securepay-card-component iframe{
-    width: 100%;
-}
-") %}
+
 {% import "_includes/forms" as forms %}
 
 <div class="securepay-payment-form" id="securepay-payment-form">
+    {% if gateway.threeDSecure %}
+        <div class="input-wrapper">
+            <label for="cardholderName">CardHolder name</label>
+            <div class="cc-number-error"><p>Please enter card holder name</p></div>
+            <input maxlength="255" id="cardholderName" name="cardholderName" required="" tabindex="1" title="Enter your card number" type="text">
+        </div>
+        <iframe id="3ds-v2-challenge-iframe" name="3ds-v2-challenge-iframe" style="width:100%;height:0px"></iframe>
+    {% endif %}
     {# SecurePay UI Component Container #}
     <div id="securepay-card-component" class="securepay-card-component">
         {# This will be populated by the SecurePay JavaScript SDK #}
@@ -22,4 +26,146 @@
         <div class="spinner"></div>
         <p>{{ 'Processing your payment...'|t('commerce') }}</p>
     </div>
+    <div class="errors"></div>
 </div>
+{% if gateway.threeDSecure %}
+{% do view.registerCss("
+    #securepay-card-component iframe{
+        width: 100%;
+    }
+    #securepay-payment-form{
+        background-color: #" ~ gateway.backgroundColour ~ ";
+        padding:15px;
+    }
+    #securepay-payment-form .input-wrapper{
+        margin:0 0 20px;
+        display:flex;
+        gap: 10px;
+        flex-direction:column;
+    }
+    #securepay-payment-form label {
+        font-family: " ~ gateway.labelFontFamily ~ "; 
+        font-size: " ~ gateway.labelFontSize ~ "; 
+        color: #" ~ gateway.labelFontColour ~ "; 
+        font-weight: 700;
+        line-height:1.4;
+    }
+    #securepay-payment-form .cc-number-error{
+        line-height:1.4;
+        margin-top:-6px;
+        display: none;   
+    }
+    #securepay-payment-form .ng-invalid .cc-number-error{
+        display: block;
+    }
+    #securepay-payment-form .cc-number-error p {
+        color: #bc111e;
+        font-family: Helvetica,sans-serif;
+        font-size: 12px;
+        font-weight: 400;
+        padding: 0;
+    }
+
+    #securepay-payment-form input[name=cardholderName] {
+        font-family:" ~ gateway.inputFontFamily ~ "; 
+        font-size: " ~ gateway.inputFontSize ~ "; 
+        color: #" ~ gateway.inputFontColour ~ ";
+        box-shadow:none;
+    }
+    #securepay-payment-form input[name=cardholderName]:focus {
+        padding: 6px 9px;
+        border: 2px solid #807370;
+    }
+    #securepay-payment-form input[name=cardholderName]:hover {
+        border-color: #807370;
+    }
+    #securepay-payment-form .ng-invalid input[name=cardholderName]{
+        border-color:#bc111e;
+    }
+    #securepay-payment-form .errors{
+        color: #bc111e;
+        padding: 0;
+    }
+") %}
+{% endif %}
+{% do view.registerJs("
+let form;
+let cardholderNameInput;
+let cartTokenInput;
+let cartScheme;
+let cardholderNameWrapper;
+let submitButton;
+let submitButtonText = 'Processing...';
+let securePayThreedsUI;
+
+document.addEventListener('DOMContentLoaded', function() {
+    form = document.getElementById('checkout-payment');
+    cardholderNameInput = document.querySelector('input#cardholderName');
+    cartTokenInput = document.querySelector('input#cartToken');
+    cartScheme = document.querySelector('input#cartScheme');
+    cardholderNameWrapper = cardholderNameInput ? cardholderNameInput.closest('.input-wrapper') : null;
+    submitButton = form.querySelector('button[type=\"submit\"]');
+
+    if (submitButton) {
+        submitButton.addEventListener('click', function(e) {
+            // Prevent default form submission
+            e.preventDefault();
+            
+            // Validate cardholder name
+            if(cardholderNameInput){
+                if (!cardholderNameInput.value.trim()) {
+                    cardholderNameWrapper.classList.add('ng-invalid');
+                    return false;
+                }
+            }
+            if(!cartTokenInput.value.trim()){
+                return false;
+            }
+            if(cardholderNameWrapper){
+                cardholderNameWrapper.classList.remove('ng-invalid');
+                securePayThreedsUI.startThreeDS();
+            }
+            else{
+                form.requestSubmit();
+            }
+            submitButton.disabled = true;
+            text =  submitButton.textContent;
+            submitButton.textContent = submitButtonText;
+            submitButtonText = text;
+            
+        });
+    }
+    // Remove ng-invalid class when user starts typing
+    if(cardholderNameInput){
+        cardholderNameInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                cardholderNameWrapper.classList.remove('ng-invalid');
+            }
+        });
+    }
+});
+
+function displayErrors(errors){
+    if (errors && errors.errors && Array.isArray(errors.errors)) {
+        var errorContainer = document.querySelector('#securepay-payment-form .errors');
+        errorContainer.innerHTML = '';
+        if (errorContainer) {
+            var errorList = document.createElement('ul');
+            errors.errors.forEach(function(error) {
+                errorList.innerHTML += '<li>ERROR: ' + error.detail + '.<br/>The page will be refresh.</li>';
+            });
+            errorContainer.appendChild(errorList);
+        }
+    }
+    
+    if (submitButton) {
+        submitButton.disabled = false;
+        var currentText = submitButton.textContent;
+        submitButton.textContent = submitButtonText;
+        submitButtonText = currentText;
+    }
+    setTimeout(function() {
+        window.location.reload();
+    }, 1000);
+}
+", constant('craft\\web\\View::POS_END')) %}

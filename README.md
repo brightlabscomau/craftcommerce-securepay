@@ -2,7 +2,7 @@
 
 This plugin provides a SecurePay payment gateway integration for Craft Commerce, implementing the [official SecurePay API v2](https://auspost.com.au/payments/docs/securepay/) using the recommended JavaScript SDK for enhanced security.
 
-**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.2.1 | **Package**: `brightlabs/craft-securepay`
+**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.3.0 | **Package**: `brightlabs/craft-securepay`
 
 ## 🚀 Features
 
@@ -12,16 +12,18 @@ This plugin provides a SecurePay payment gateway integration for Craft Commerce,
 - **Purchase Transactions**: Supports immediate capture of funds (purchase).
 - **Authorisation and Capture Workflows**: Supports authorise now, capture later workflows for delayed payment processing.
 - **Full and Partial Refund**: Supports full and partial refunds only for AUD transactions.
-- **Sandbox Testing**: Complete support for SecurePay's sandbox environment.
+- **Sandbox Testing**: Complete support for SecurePay's sandbox environment with pre-configured test credentials.
 
 ### Security & Authentication
 - **PCI DSS SAQ-A Compliant**: Designed for the highest level of PCI compliance by ensuring no sensitive card data ever touches your server.
 - **OAuth 2.0**: Secure API authentication with automatic token management and 24-hour caching for improved performance.
+- **3D Secure 2.0**: Full implementation of 3D Secure 2.0 authentication for enhanced security and fraud prevention.
 
 ### Admin & Configuration Features
 - **Full Admin Configuration**: All settings are managed within the Craft Commerce gateway settings.
 - **Extensive Styling Options**: Customise the look and feel of the payment form directly from the gateway settings, including colours, fonts, and more.
 - **Card Type Configuration**: Easily select which card types are allowed for payment.
+- **3D Secure Toggle**: Enable or disable 3D Secure 2.0 authentication per gateway.
 
 ## 📋 Requirements
 
@@ -65,6 +67,8 @@ php craft plugin/install securepay
 |---|---|:---:|
 | Sandbox Mode | Enable for testing, disable for live transactions | ✅ |
 
+*Note: When Sandbox Mode is enabled, the plugin automatically uses pre-configured test credentials for easier setup.*
+
 ### JavaScript SDK Styling
 
 *The JavaScript SDK is always used for enhanced security and PCI compliance.*
@@ -81,6 +85,12 @@ php craft plugin/install securepay
 | Input Font Size | Font size for form input fields | Text | `1.1rem` |
 | Input Font Colour | Colour of text in form input fields | Colour | `#000080` |
 
+### Security Features
+
+| Setting | Description | Default |
+|---|---|:---:|
+| 3D Secure 2.0 | Enable 3D Secure 2.0 authentication for enhanced security | ❌ Disabled |
+
 ### Payment Features
 
 | Setting | Description | Default |
@@ -95,17 +105,26 @@ This plugin is designed for **PCI SAQ-A** compliance:
 - No sensitive card data is ever transmitted to or stored on your servers.
 - Secure tokenization is handled entirely by the JavaScript SDK.
 
+### 3D Secure 2.0
+The plugin includes full 3D Secure 2.0 implementation:
+- Enhanced authentication flow for high-risk transactions
+- Automatic challenge flow when required by the card issuer
+- Seamless integration with the payment process
+- Configurable per gateway instance
+
 ### Authentication Flow
 ```
 Client Browser → SecurePay JS SDK (Tokenization)
        ↓ (Token)
 Your Server → Craft Commerce → SecurePay API (Payment Processing)
+       ↓ (3D Secure if required)
+3D Secure Challenge → Card Issuer → Customer Authentication
 ```
 
 ## 🧪 Testing
 
 ### Test Environment
-To use the test environment, simply enable **Sandbox Mode** in the gateway settings. The plugin will automatically use the correct sandbox URLs.
+To use the test environment, simply enable **Sandbox Mode** in the gateway settings. The plugin will automatically use the correct sandbox URLs and pre-configured test credentials.
 
 ### Test Card Numbers
 
@@ -122,12 +141,18 @@ To use the test environment, simply enable **Sandbox Mode** in the gateway setti
 - **CVV**: Any 3-4 digit number (e.g., `123`)
 - **Name**: Any cardholder name
 
+### 3D Secure Testing
+When 3D Secure 2.0 is enabled, test cards may trigger authentication challenges:
+- Follow the authentication flow as prompted
+- Card Holder Name: Test Card
+- Expiry date (YYMM): value must be 2508
+- Card: VISA:4100000000000100, MasterCard:5100000000000107
+- Test both successful and failed authentication scenarios
 
 ### Browser Support
 - Safari on macOS and iOS
 - Chrome on supported devices
 - Edge on Windows with Windows Hello
-
 
 ### Supported Currencies
 - `AUD` (Currently hardcoded)
@@ -145,6 +170,7 @@ The plugin provides logging for key events and errors, which can be found in `st
 | Refund Payment | `POST` | `/v2/payments/{id}/refund` | ✅ Implemented |
 | Authorise Payment | `POST` | `/v2/payments/preauth` | ✅ Implemented |
 | Capture Payment | `POST` | `/v2/payments/{id}/capture` | ✅ Implemented |
+| 3D Secure Authentication | `POST` | `/v2/payments` | ✅ Implemented |
 
 ## 📚 Documentation
 
@@ -164,7 +190,9 @@ This plugin is licensed under the MIT License.
 ## 📈 Roadmap
 
 ### Future Releases
-- [ ] 3D Secure 2.0 Integration
+- [ ] Enhanced 3D Secure 2.0 JavaScript Integration with unlimited validation requests
+- [ ] Adding optional merchantRiskData to 3D Secure 2.0 JavaScript Integration
+- [ ] Improved JavaScript SDK implementation and error handling
 - [ ] Fraud Detection Features (FraudGuard)
 - [ ] Apple Pay Support
 - [ ] PayPal Payments
