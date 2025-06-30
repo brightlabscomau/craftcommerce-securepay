@@ -35,14 +35,28 @@ This plugin provides a SecurePay payment gateway integration for Craft Commerce,
 
 ## 🔧 Installation
 
-### 1. Install the Plugin
+### 1. Configure Composer Repository
+Before installing the plugin, you need to add the Bitbucket repository to your `composer.json` file. Add the following to your `composer.json`:
+
+```json
+{
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://bitbucket.org/bright-labs/craftcommerce-securepay"
+    }
+  ]
+}
+```
+
+### 2. Install the Plugin
 From your project's root directory, run the following commands:
 ```bash
 composer require brightlabs/craft-securepay
 php craft plugin/install securepay
 ```
 
-### 2. Create a Payment Gateway
+### 3. Create a Payment Gateway
 
 1.  In the Craft control panel, go to **Commerce → System Settings → Gateways**.
 2.  Click the "**New Gateway**" button.
@@ -181,7 +195,7 @@ The plugin provides logging for key events and errors, which can be found in `st
 
 ## 🆘 Support
 
-For issues with the plugin itself, please open an issue on the [GitHub repository](https://github.com/brightlabs/craft-securepay/issues). For problems related to your SecurePay account, please contact SecurePay support directly.
+For issues with the plugin itself, please open an issue on the [Bitbucket repository](https://bitbucket.org/bright-labs/craftcommerce-securepay/issues). For problems related to your SecurePay account, please contact SecurePay support directly.
 
 ## ⚖️ License
 

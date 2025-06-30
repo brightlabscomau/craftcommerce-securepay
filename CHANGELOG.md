@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-06-30
+
+### Added
+- **Enhanced Credential Validation**: Real-time credential validation with status tracking
+- **Frontend/Admin Messages**: Clear error messages shown when credentials are invalid in both frontend and admin panel
+- **Final Credential Properties**: Better credential management with `clientIdFinal`, `clientSecretFinal`, and `merchantCodeFinal`
+
+### Changed
+- **Gateway Availability**: Gateway automatically hidden from frontend when credentials are invalid
+- **JavaScript SDK**: Payment form only loads when credentials are valid in Live mode
+- **Composer Repository**: Updated from GitHub to Bitbucket repository for plugin distribution
+
+### Security
+- Gateway properly hidden from frontend when credentials are invalid in Live mode
+- Enhanced credential validation before API operations
+
 ## [1.3.0] - 2025-06-25
 
 ### Added

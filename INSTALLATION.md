@@ -5,18 +5,32 @@
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
 **Plugin Package**: `brightlabs/craft-securepay`  
-**Version**: 1.3.0
+**Version**: 1.3.1
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps
 
-### 1. Install the Plugin via Composer
+### 1. Configure Composer Repository
+Before installing the plugin, you need to add the Bitbucket repository to your `composer.json` file. Add the following to your `composer.json`:
+
+```json
+{
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://bitbucket.org/bright-labs/craftcommerce-securepay"
+    }
+  ]
+}
+```
+
+### 2. Install the Plugin via Composer
 From your project's root directory, run the following command:
 ```bash
 composer require brightlabs/craft-securepay
 ```
 
-### 2. Install the Plugin in Craft
+### 3. Install the Plugin in Craft
 In the Craft control panel, go to **Settings → Plugins**, find "SecurePay for Craft Commerce" and click **Install**.
 
 Alternatively, you can run the following command from your terminal:
@@ -24,7 +38,7 @@ Alternatively, you can run the following command from your terminal:
 php craft plugin/install securepay
 ```
 
-### 3. Create a Payment Gateway
+### 4. Create a Payment Gateway
 
 1.  Go to **Commerce → System Settings → Gateways**.
 2.  Click the "**New Gateway**" button.
@@ -32,7 +46,7 @@ php craft plugin/install securepay
 4.  Select **SecurePay** as the gateway type.
 5.  Configure the gateway settings.
 
-### 4. Gateway Configuration
+### 5. Gateway Configuration
 
 #### Required Settings
 The following settings are **required** for the gateway to function:
@@ -52,11 +66,11 @@ This makes testing much easier as you don't need to manually enter test credenti
 #### Security Features
 - **3D Secure 2.0**: Enable this option to activate 3D Secure 2.0 authentication for enhanced security. This requires 3D Secure to be enabled on your SecurePay account.
 
-### 5. Advanced Configuration (Optional)
+### 6. Advanced Configuration (Optional)
 
 The plugin offers extensive styling options for the payment form, allowing you to match it to your site's design. These settings are available under the "JavaScript SDK Styling" section in the gateway configuration.
 
-### 6. Testing
+### 7. Testing
 
 1.  Enable **Sandbox Mode** in your gateway settings.
 2.  Use SecurePay's official test card numbers to perform test transactions.
@@ -72,7 +86,7 @@ If you have enabled 3D Secure 2.0:
 - Use any test authentication code (e.g., `123456`)
 - Test both successful and failed authentication scenarios
 
-### 7. Going Live
+### 8. Going Live
 
 1.  Obtain your live API credentials from your SecurePay merchant account.
 2.  Update your gateway settings in Craft Commerce with the live credentials.
@@ -82,7 +96,7 @@ If you have enabled 3D Secure 2.0:
 
 ## Support
 
--   **Plugin Issues**: For bugs or feature requests related to this plugin, please open an issue on the [GitHub repository](https://github.com/brightlabs/craft-securepay/issues).
+-   **Plugin Issues**: For bugs or feature requests related to this plugin, please open an issue on the [Bitbucket repository](https://bitbucket.org/bright-labs/craftcommerce-securepay/issues).
 -   **SecurePay Account Support**: For issues with your SecurePay account, API credentials, or the SecurePay service itself, please contact SecurePay support directly.
 
 ## Features Status

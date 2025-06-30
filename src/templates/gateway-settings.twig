@@ -1,7 +1,47 @@
 {# @var gateway brightlabs\securepay\gateways\Gateway #}
 
 {% import "_includes/forms" as forms %}
-
+{% if not gateway.isCredentialValid %}
+<div class="securepay-error-message">
+    <div class="error-icon">⚠️</div>
+    <h3>SecurePay Gateway Configuration Error</h3>
+    <p>Your SecurePay gateway is not properly configured. Please check the following:</p>
+    <ul>
+        <li>Verify your Merchant Code is correct</li>
+        <li>Ensure your Client ID is valid</li>
+        <li>Confirm your Client Secret is properly set</li>
+        <li>Check that you're using the correct environment (Sandbox/Live)</li>
+    </ul>
+    <p><strong>Note:</strong> If you're testing, make sure to enable Sandbox Mode. For production, ensure you have valid live credentials configured and disable Sandbox Mode.</p>
+</div>
+{% do view.registerCss("
+.securepay-error-message{
+        border:1px solid red;
+        border-radius: 4px;
+        padding: 20px;
+        margin: 20px 0;
+        background-color: #fff5f5;
+        color: #c53030;
+    }
+    .securepay-error-message .error-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    .securepay-error-message h3 {
+        margin: 0 0 10px 0;
+        color: #c53030;
+        font-size: 1.2rem;
+    }
+    .securepay-error-message p {
+        margin: 5px 0;
+        line-height: 1.5;
+    }
+    .securepay-error-message strong {
+        font-weight: 600;
+    }
+}
+") %}
+{% endif %}
 <div class="field">
     <div class="heading">
         <h2>{{ 'API Credentials'|t('commerce') }}</h2>

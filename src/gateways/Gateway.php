@@ -54,6 +54,20 @@ class Gateway extends BaseGateway
     public string $merchantCode = '';
 
     /**
+     * @var string
+     */
+    public string $clientIdFinal = '';
+
+    /**
+     * @var string
+     */
+    public string $clientSecretFinal = '';
+
+    /**
+     * @var string
+     */
+    public string $merchantCodeFinal = '';
+    /**
      * @var bool
      */
     public bool $sandboxMode = true;
@@ -120,7 +134,10 @@ class Gateway extends BaseGateway
      * @var Credential|null Credential instance
      */
     private ?Credential $credential = null;
-
+    /**
+     * @var bool Check if credential is valid
+     */
+    public bool $isCredentialValid = false;
     /**
      * @var string|null tokenised card token
      */
@@ -154,12 +171,23 @@ class Gateway extends BaseGateway
     {
         parent::__construct($config);
         if($this->sandboxMode){
-            $this->merchantCode = '5AR0055';
-            $this->clientId = '0oaxb9i8P9vQdXTsn3l5';
-            $this->clientSecret = '0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp';
+            $this->clientIdFinal = '0oaxb9i8P9vQdXTsn3l5';
+            $this->clientSecretFinal = '0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp';
+            $this->merchantCodeFinal = '5AR0055';
+        }
+        else{
+            $this->clientIdFinal = $this->clientId;
+            $this->clientSecretFinal = $this->clientSecret;
+            $this->merchantCodeFinal = $this->merchantCode;
         }
         // get credential and SecurePay Authentication
-        $this->getCredential();
+        try {
+            $this->getCredential();
+            $this->isCredentialValid = true;
+        } catch (Exception $e) {
+            Craft::error('SecurePay authentication error: ' . $e->getMessage(), __METHOD__);
+            $this->isCredentialValid = false;
+        }
     }
 
     /**
@@ -215,150 +243,151 @@ class Gateway extends BaseGateway
      */
     private function registerJavaScriptSDK($view): void
     {
-        
-        $jsUrl = $this->sandboxMode 
-            ? Endpoint::URL_SANDBOX_SCRIPT
-            : Endpoint::URL_LIVE_SCRIPT;
+        if($this->isCredentialValid){
+            $jsUrl = $this->sandboxMode 
+                ? Endpoint::URL_SANDBOX_SCRIPT
+                : Endpoint::URL_LIVE_SCRIPT;
 
-        $jsUrl3DS2 = $this->sandboxMode 
-            ? Endpoint::URL_SANDBOX_3DS2_SCRIPT
-            : Endpoint::URL_LIVE_3DS2_SCRIPT;   
-        
-        // Register the SecurePay JavaScript SDK
-        $view->registerScript('1', View::POS_END, [
-            'src' => $jsUrl,
-            'id'  => 'securepay-ui-js'
-        ]); 
-        $js = "";
-        if($this->threeDSecure){
-            $initiatePayment = $this->initiatePayment();
-            Craft::$app->getSession()->set('initiatePayment', $initiatePayment);
-            $billingAddress = $this->order->getBillingAddress();
-            $shippingAddress = $this->order->getShippingAddress();
+            $jsUrl3DS2 = $this->sandboxMode 
+                ? Endpoint::URL_SANDBOX_3DS2_SCRIPT
+                : Endpoint::URL_LIVE_3DS2_SCRIPT;   
             
-            if(!isset($initiatePayment['errors'])){
-                $view->registerScript('', View::POS_END, [
-                    'src' => $jsUrl3DS2,
-                    'id'  => 'securepay-ui-js-3ds2'
-                ]); 
-                $js .= "document.addEventListener('DOMContentLoaded', function() {
-                    var sp3dsConfig = {
-                        clientId: '".$initiatePayment['threedSecureDetails']['providerClientId']."',
-                        iframe: document.getElementById('3ds-v2-challenge-iframe'),
-                        token: '".$initiatePayment['orderToken']."',
-                        simpleToken: '".$initiatePayment['threedSecureDetails']['simpleToken']."',
-                        threeDSSessionId: '".$initiatePayment['threedSecureDetails']['sessionId']."',
-                        onRequestInputData: function(){
-                            cardholderName = document.querySelector('input#cardholderName') ? document.querySelector('input#cardholderName').value : '';
-                            cardToken = document.querySelector('input#cartToken') ? document.querySelector('input#cartToken').value : '';
-                            var requestData = {
-                                'cardTokenInfo':{
-                                    'cardholderName':cardholderName,
-                                    'cardToken':cardToken
-                                },
-                                'accountData':{
-                                    'emailAddress':'".substr($this->order->email, 0, $this->maxEmailLength)."',
-                                },
-                                'billingAddress':{
-                                    'city':'".substr($billingAddress->locality, 0, $this->maxAddressFieldLength)."',
-                                    'state':'".$billingAddress->administrativeArea."',
-                                    'country':'".$billingAddress->countryCode."',
-                                    'zipCode':'".substr($billingAddress->postalCode, 0, $this->maxZipCodeLength)."',
-                                    'streetAddress':'".substr($billingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
-                                    'detailedStreetAddress':'".substr($billingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
-                                    'detailedStreetAddressAdditional':'".substr($billingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
-                                },
-                                'shippingAddress':{
-                                    'city':'".substr($shippingAddress->locality, 0, $this->maxAddressFieldLength)."',
-                                    'state':'".$shippingAddress->administrativeArea."',
-                                    'country':'".$shippingAddress->countryCode."',
-                                    'zipCode':'".substr($shippingAddress->postalCode, 0, $this->maxZipCodeLength)."',
-                                    'streetAddress':'".substr($shippingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
-                                    'detailedStreetAddress':'".substr($shippingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
-                                    'detailedStreetAddressAdditional':'".substr($shippingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
-                                },
-                                'threeDSInfo':{
-                                    'threeDSReqAuthMethodInd':'01'
-                                }
-                            };
-                            console.log(requestData);
-                            return requestData;
-                        },
-                        onThreeDSResultsResponse: async function(response){
-                            if(response.authenticationValue && response.liabilityShiftIndicator == 'Y'){
-                                form.requestSubmit();
-                            }
-                            else{
-                                var errors = {
-                                    'errors': [
-                                        {
-                                            'code': '3DS2_CARD_UNSUPPORTED',
-                                            'detail': 'Card Unsupported for 3D Secure'
-                                        }
-                                    ]
+            // Register the SecurePay JavaScript SDK
+            $view->registerScript('1', View::POS_END, [
+                'src' => $jsUrl,
+                'id'  => 'securepay-ui-js'
+            ]); 
+            $js = "";
+            if($this->threeDSecure){
+                $initiatePayment = $this->initiatePayment();
+                Craft::$app->getSession()->set('initiatePayment', $initiatePayment);
+                $billingAddress = $this->order->getBillingAddress();
+                $shippingAddress = $this->order->getShippingAddress();
+                
+                if(!isset($initiatePayment['errors'])){
+                    $view->registerScript('', View::POS_END, [
+                        'src' => $jsUrl3DS2,
+                        'id'  => 'securepay-ui-js-3ds2'
+                    ]); 
+                    $js .= "document.addEventListener('DOMContentLoaded', function() {
+                        var sp3dsConfig = {
+                            clientId: '".$initiatePayment['threedSecureDetails']['providerClientId']."',
+                            iframe: document.getElementById('3ds-v2-challenge-iframe'),
+                            token: '".$initiatePayment['orderToken']."',
+                            simpleToken: '".$initiatePayment['threedSecureDetails']['simpleToken']."',
+                            threeDSSessionId: '".$initiatePayment['threedSecureDetails']['sessionId']."',
+                            onRequestInputData: function(){
+                                cardholderName = document.querySelector('input#cardholderName') ? document.querySelector('input#cardholderName').value : '';
+                                cardToken = document.querySelector('input#cartToken') ? document.querySelector('input#cartToken').value : '';
+                                var requestData = {
+                                    'cardTokenInfo':{
+                                        'cardholderName':cardholderName,
+                                        'cardToken':cardToken
+                                    },
+                                    'accountData':{
+                                        'emailAddress':'".substr($this->order->email, 0, $this->maxEmailLength)."',
+                                    },
+                                    'billingAddress':{
+                                        'city':'".substr($billingAddress->locality, 0, $this->maxAddressFieldLength)."',
+                                        'state':'".$billingAddress->administrativeArea."',
+                                        'country':'".$billingAddress->countryCode."',
+                                        'zipCode':'".substr($billingAddress->postalCode, 0, $this->maxZipCodeLength)."',
+                                        'streetAddress':'".substr($billingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
+                                        'detailedStreetAddress':'".substr($billingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
+                                        'detailedStreetAddressAdditional':'".substr($billingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
+                                    },
+                                    'shippingAddress':{
+                                        'city':'".substr($shippingAddress->locality, 0, $this->maxAddressFieldLength)."',
+                                        'state':'".$shippingAddress->administrativeArea."',
+                                        'country':'".$shippingAddress->countryCode."',
+                                        'zipCode':'".substr($shippingAddress->postalCode, 0, $this->maxZipCodeLength)."',
+                                        'streetAddress':'".substr($shippingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
+                                        'detailedStreetAddress':'".substr($shippingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
+                                        'detailedStreetAddressAdditional':'".substr($shippingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
+                                    },
+                                    'threeDSInfo':{
+                                        'threeDSReqAuthMethodInd':'01'
+                                    }
                                 };
+                                console.log(requestData);
+                                return requestData;
+                            },
+                            onThreeDSResultsResponse: async function(response){
+                                if(response.authenticationValue && response.liabilityShiftIndicator == 'Y'){
+                                    form.requestSubmit();
+                                }
+                                else{
+                                    var errors = {
+                                        'errors': [
+                                            {
+                                                'code': '3DS2_CARD_UNSUPPORTED',
+                                                'detail': 'Card Unsupported for 3D Secure'
+                                            }
+                                        ]
+                                    };
+                                    displayErrors(errors);
+                                }
+                            },
+                            onThreeDSError: async function(errors){
                                 displayErrors(errors);
                             }
-                        },
-                        onThreeDSError: async function(errors){
-                            displayErrors(errors);
-                        }
-                    };
+                        };
 
-                    securePayThreedsUI = new window.SecurePayThreedsUI();
-                    securePayThreedsUI = securePayThreedsUI;
-                    securePayThreedsUI.initThreeDS(sp3dsConfig);
-                });";
-            }
-        }
-
-        $js .= "
-        // Initialize SecurePay when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            window.mySecurePayUI = new securePayUI.init({
-                containerId: 'securepay-card-component',
-                scriptId: 'securepay-ui-js',
-                clientId: '".$this->clientId."',
-                merchantCode: '".$this->merchantCode."',
-                style: {
-                    backgroundColor: '#" . $this->backgroundColour . "',
-                    label: {
-                    font: {
-                        family: '" . $this->labelFontFamily . "',
-                        size: '" . $this->labelFontSize . "',
-                        color: '#" . $this->labelFontColour . "'
-                    }
-                    },
-                    input: {
-                        font: {
-                            family: '" . $this->inputFontFamily . "',
-                            size: '" . $this->inputFontSize . "',
-                            color: '#" . $this->inputFontColour . "'
-                        }
-                    }
-                },
-                card: { // card specific config options / callbacks
-                    showCardIcons: " . ($this->showCardIcons ? 'true' : 'false') . ",
-                    allowedCardTypes: " . Json::encode($this->allowedCardTypes) . ",
-                    onFormValidityChange: function(valid) {
-                        window.mySecurePayUI.tokenise();
-                        
-                    },
-                    onTokeniseSuccess: async function(tokenisedCard) {
-                        console.log(tokenisedCard);
-                        document.getElementById('cartToken').value = tokenisedCard.token;
-                        document.getElementById('cartCreatedAt').value = tokenisedCard.createdAt;
-                        document.getElementById('cartScheme').value = tokenisedCard.scheme;
-                    },
-                    onTokeniseError: function(errors) {
-                        errors = typeof errors === 'string' ? JSON.parse(errors) : errors;
-                        //displayErrors(errors);
-                    }
+                        securePayThreedsUI = new window.SecurePayThreedsUI();
+                        securePayThreedsUI = securePayThreedsUI;
+                        securePayThreedsUI.initThreeDS(sp3dsConfig);
+                    });";
                 }
-            });
-        });";
+            }
 
-        $view->registerJs($js, View::POS_END);
+            $js .= "
+            // Initialize SecurePay when DOM is loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                window.mySecurePayUI = new securePayUI.init({
+                    containerId: 'securepay-card-component',
+                    scriptId: 'securepay-ui-js',
+                    clientId: '".$this->clientIdFinal."',
+                    merchantCode: '".$this->merchantCodeFinal."',
+                    style: {
+                        backgroundColor: '#" . $this->backgroundColour . "',
+                        label: {
+                        font: {
+                            family: '" . $this->labelFontFamily . "',
+                            size: '" . $this->labelFontSize . "',
+                            color: '#" . $this->labelFontColour . "'
+                        }
+                        },
+                        input: {
+                            font: {
+                                family: '" . $this->inputFontFamily . "',
+                                size: '" . $this->inputFontSize . "',
+                                color: '#" . $this->inputFontColour . "'
+                            }
+                        }
+                    },
+                    card: { // card specific config options / callbacks
+                        showCardIcons: " . ($this->showCardIcons ? 'true' : 'false') . ",
+                        allowedCardTypes: " . Json::encode($this->allowedCardTypes) . ",
+                        onFormValidityChange: function(valid) {
+                            window.mySecurePayUI.tokenise();
+                            
+                        },
+                        onTokeniseSuccess: async function(tokenisedCard) {
+                            console.log(tokenisedCard);
+                            document.getElementById('cartToken').value = tokenisedCard.token;
+                            document.getElementById('cartCreatedAt').value = tokenisedCard.createdAt;
+                            document.getElementById('cartScheme').value = tokenisedCard.scheme;
+                        },
+                        onTokeniseError: function(errors) {
+                            errors = typeof errors === 'string' ? JSON.parse(errors) : errors;
+                            //displayErrors(errors);
+                        }
+                    }
+                });
+            });";
+
+            $view->registerJs($js, View::POS_END);
+        }
     }
 
     /**
@@ -386,10 +415,14 @@ class Gateway extends BaseGateway
         Craft::info('SecurePay availability check for order ID: ' . $order->id, __METHOD__);
         
         // Basic validation - must have credentials
-        if (!$this->clientId || !$this->clientSecret || !$this->merchantCode) {
-            Craft::info('SecurePay unavailable: Missing credentials (clientId: ' . ($this->clientId ? 'set' : 'missing') . 
-                       ', clientSecret: ' . ($this->clientSecret ? 'set' : 'missing') . 
-                       ', merchantCode: ' . ($this->merchantCode ? 'set' : 'missing') . ')', __METHOD__);
+        if (!$this->clientIdFinal || !$this->clientSecretFinal || !$this->merchantCodeFinal) {
+            Craft::info('SecurePay unavailable: Missing credentials (clientId: ' . ($this->clientIdFinal ? 'set' : 'missing') . 
+                       ', clientSecret: ' . ($this->clientSecretFinal ? 'set' : 'missing') . 
+                       ', merchantCode: ' . ($this->merchantCodeFinal ? 'set' : 'missing') . ')', __METHOD__);
+            return false;
+        }
+        if(!$this->isCredentialValid){
+            Craft::info('SecurePay unavailable: Credential is not valid', __METHOD__);
             return false;
         }
 
@@ -648,7 +681,9 @@ class Gateway extends BaseGateway
     public function rules(): array
     {
         $rules = parent::rules();
-        $rules[] = [['clientId', 'clientSecret', 'merchantCode'], 'required'];
+        if(!$this->sandboxMode){
+            $rules[] = [['clientId', 'clientSecret', 'merchantCode'], 'required'];
+        }
         $rules[] = [['clientId', 'clientSecret', 'merchantCode', 'paymentType', 'backgroundColour', 'labelFontFamily', 'labelFontSize', 'labelFontColour', 'inputFontFamily', 'inputFontSize', 'inputFontColour'], 'string'];
         $rules[] = [['sandboxMode', 'threeDSecure', 'showCardIcons', 'cardPayments'], 'boolean'];
         $rules[] = [['paymentType'], 'in', 'range' => ['purchase', 'authorize']];
@@ -666,13 +701,12 @@ class Gateway extends BaseGateway
      */
     public function getCredential()
     {
-
         if ($this->credential === null) {
             $cache = Craft::$app->getCache();
-            $cache_key = "securepay_token_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCode . $this->clientId . $this->clientSecret);
+            $cache_key = "securepay_token_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCodeFinal . $this->clientIdFinal . $this->clientSecretFinal);
             $token = $cache->getOrSet($cache_key, function()  {
                 try {
-					$request = new ClientCredentialsRequest(!$this->sandboxMode, $this->clientId, $this->clientSecret);
+					$request = new ClientCredentialsRequest(!$this->sandboxMode, $this->clientIdFinal, $this->clientSecretFinal);
 					$response = $request->execute();
 
 					if (method_exists($response, 'getFirstError') && $response->getFirstError()) {
@@ -690,8 +724,7 @@ class Gateway extends BaseGateway
                     throw new Exception($message);
                 }
             }, 86400); // Default 1 day
-            $this->credential = new Credential(!$this->sandboxMode, $this->merchantCode, $this->clientId, $this->clientSecret, $token);
-            
+            $this->credential = new Credential(!$this->sandboxMode, $this->merchantCodeFinal, $this->clientIdFinal, $this->clientSecretFinal, $token);
         }
     }
     /**
