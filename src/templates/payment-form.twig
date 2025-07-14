@@ -8,7 +8,7 @@
             <div class="input-wrapper">
                 <label for="cardholderName">CardHolder name</label>
                 <div class="cc-number-error"><p>Please enter card holder name</p></div>
-                <input maxlength="255" id="cardholderName" name="cardholderName" required="" tabindex="1" title="Enter your card number" type="text">
+                <input maxlength="255" id="cardholderName" class="securepayCardholderName" name="cardholderName" required="" tabindex="1" title="Enter your card number" type="text">
             </div>
             <iframe id="3ds-v2-challenge-iframe" name="3ds-v2-challenge-iframe" style="width:100%;height:0px"></iframe>
         {% endif %}
@@ -17,9 +17,9 @@
             {# This will be populated by the SecurePay JavaScript SDK #}
         </div>
         {# Hidden fields for Craft Commerce form submission #}
-        <input type="hidden" name="scheme" id="cartScheme" value="">
-        <input type="hidden" name="createdAt" id="cartCreatedAt" value="">
-        <input type="hidden" name="token" id="cartToken" value="">
+        <input type="hidden" name="scheme" class="securepayCardScheme" value="">
+        <input type="hidden" name="createdAt" class="securepayCardCreatedAt" value="">
+        <input type="hidden" name="token" class="securepayCardToken" value="">
 
         {# Payment processing status #}
         <div id="payment-processing" class="payment-processing" style="display: none;">
@@ -30,35 +30,35 @@
     </div>
     {% if gateway.threeDSecure %}
         {% do view.registerCss("
-            #securepay-card-component iframe{
+            .securepay-card-component iframe{
                 width: 100%;
             }
-            #securepay-payment-form{
+            .securepay-payment-form{
                 background-color: #" ~ gateway.backgroundColour ~ ";
                 padding:15px;
             }
-            #securepay-payment-form .input-wrapper{
+            .securepay-payment-form .input-wrapper{
                 margin:0 0 20px;
                 display:flex;
                 gap: 10px;
                 flex-direction:column;
             }
-            #securepay-payment-form label {
+            .securepay-payment-form label {
                 font-family: " ~ gateway.labelFontFamily ~ "; 
                 font-size: " ~ gateway.labelFontSize ~ "; 
                 color: #" ~ gateway.labelFontColour ~ "; 
                 font-weight: 700;
                 line-height:1.4;
             }
-            #securepay-payment-form .cc-number-error{
+            .securepay-payment-form .cc-number-error{
                 line-height:1.4;
                 margin-top:-6px;
                 display: none;   
             }
-            #securepay-payment-form .ng-invalid .cc-number-error{
+            .securepay-payment-form .ng-invalid .cc-number-error{
                 display: block;
             }
-            #securepay-payment-form .cc-number-error p {
+            .securepay-payment-form .cc-number-error p {
                 color: #bc111e;
                 font-family: Helvetica,sans-serif;
                 font-size: 12px;
@@ -66,30 +66,30 @@
                 padding: 0;
             }
 
-            #securepay-payment-form input[name=cardholderName] {
+            .securepay-payment-form input[name=cardholderName] {
                 font-family:" ~ gateway.inputFontFamily ~ "; 
                 font-size: " ~ gateway.inputFontSize ~ "; 
                 color: #" ~ gateway.inputFontColour ~ ";
                 box-shadow:none;
             }
-            #securepay-payment-form input[name=cardholderName]:focus {
+            .securepay-payment-form input[name=cardholderName]:focus {
                 padding: 6px 9px;
                 border: 2px solid #807370;
             }
-            #securepay-payment-form input[name=cardholderName]:hover {
+            .securepay-payment-form input[name=cardholderName]:hover {
                 border-color: #807370;
             }
-            #securepay-payment-form .ng-invalid input[name=cardholderName]{
+            .securepay-payment-form .ng-invalid input[name=cardholderName]{
                 border-color:#bc111e;
             }
-            #securepay-payment-form .errors{
+            .securepay-payment-form .errors{
                 color: #bc111e;
                 padding: 0;
             }
         ") %}
     {% else %}
         {% do view.registerCss("
-            #securepay-card-component iframe{
+            .securepay-card-component iframe{
                 width: 100%;
             }
             
@@ -106,13 +106,19 @@
     let securePayThreedsUI;
 
     document.addEventListener('DOMContentLoaded', function() {
-        form = document.getElementById('checkout-payment');
-        cardholderNameInput = document.querySelector('input#cardholderName');
-        cartTokenInput = document.querySelector('input#cartToken');
-        cartScheme = document.querySelector('input#cartScheme');
-        cardholderNameWrapper = cardholderNameInput ? cardholderNameInput.closest('.input-wrapper') : null;
-        submitButton = form.querySelector('button[type=\"submit\"]');
+        // Attempt to get the form and required elements
 
+        // Get the form that contains the div.securepay-payment-form
+        var securepayDiv = document.querySelector('div.securepay-payment-form');
+        if (securepayDiv) {
+            form = securepayDiv.closest('form');
+        }
+        cardholderNameInput = form ? form.querySelector('input.securepayCardholderName') : null;
+        cartTokenInput = form ? form.querySelector('input.securepayCardToken') : null;
+        cartScheme = form ? form.querySelector('input.securepayCardScheme') : null;
+        cardholderNameWrapper = cardholderNameInput ? cardholderNameInput.closest('.input-wrapper') : null;
+        submitButton = form ? form.querySelector('button[type=\"submit\"]') : null;
+        
         if (submitButton) {
             submitButton.addEventListener('click', function(e) {
                 // Prevent default form submission
@@ -173,7 +179,7 @@
         }
         setTimeout(function() {
             window.location.reload();
-        }, 1000);
+        }, 2000);
     }
     ", constant('craft\\web\\View::POS_END')) %}
 {% else %}

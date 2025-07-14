@@ -5,7 +5,7 @@
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
 **Plugin Package**: `brightlabs/craft-securepay`  
-**Version**: 1.3.1
+**Version**: 1.3.2
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps

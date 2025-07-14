@@ -277,8 +277,8 @@ class Gateway extends BaseGateway
                             simpleToken: '".$initiatePayment['threedSecureDetails']['simpleToken']."',
                             threeDSSessionId: '".$initiatePayment['threedSecureDetails']['sessionId']."',
                             onRequestInputData: function(){
-                                cardholderName = document.querySelector('input#cardholderName') ? document.querySelector('input#cardholderName').value : '';
-                                cardToken = document.querySelector('input#cartToken') ? document.querySelector('input#cartToken').value : '';
+                                cardholderName = document.querySelector('input.securepayCardholderName') ? document.querySelector('input.securepayCardholderName').value : '';
+                                cardToken = document.querySelector('input.securepayCardToken') ? document.querySelector('input.securepayCardToken').value : '';
                                 var requestData = {
                                     'cardTokenInfo':{
                                         'cardholderName':cardholderName,
@@ -286,8 +286,9 @@ class Gateway extends BaseGateway
                                     },
                                     'accountData':{
                                         'emailAddress':'".substr($this->order->email, 0, $this->maxEmailLength)."',
-                                    },
-                                    'billingAddress':{
+                                    },";
+                    if($billingAddress){
+                    $js .= "        'billingAddress':{
                                         'city':'".substr($billingAddress->locality, 0, $this->maxAddressFieldLength)."',
                                         'state':'".$billingAddress->administrativeArea."',
                                         'country':'".$billingAddress->countryCode."',
@@ -295,7 +296,10 @@ class Gateway extends BaseGateway
                                         'streetAddress':'".substr($billingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
                                         'detailedStreetAddress':'".substr($billingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
                                         'detailedStreetAddressAdditional':'".substr($billingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
-                                    },
+                                    },";
+                    }
+                    if($shippingAddress){
+                    $js .= "
                                     'shippingAddress':{
                                         'city':'".substr($shippingAddress->locality, 0, $this->maxAddressFieldLength)."',
                                         'state':'".$shippingAddress->administrativeArea."',
@@ -304,7 +308,9 @@ class Gateway extends BaseGateway
                                         'streetAddress':'".substr($shippingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
                                         'detailedStreetAddress':'".substr($shippingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
                                         'detailedStreetAddressAdditional':'".substr($shippingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
-                                    },
+                                    },";
+                    }
+                    $js .= "
                                     'threeDSInfo':{
                                         'threeDSReqAuthMethodInd':'01'
                                     }
@@ -343,47 +349,54 @@ class Gateway extends BaseGateway
             $js .= "
             // Initialize SecurePay when DOM is loaded
             document.addEventListener('DOMContentLoaded', function() {
-                window.mySecurePayUI = new securePayUI.init({
-                    containerId: 'securepay-card-component',
-                    scriptId: 'securepay-ui-js',
-                    clientId: '".$this->clientIdFinal."',
-                    merchantCode: '".$this->merchantCodeFinal."',
-                    style: {
-                        backgroundColor: '#" . $this->backgroundColour . "',
-                        label: {
-                        font: {
-                            family: '" . $this->labelFontFamily . "',
-                            size: '" . $this->labelFontSize . "',
-                            color: '#" . $this->labelFontColour . "'
-                        }
-                        },
-                        input: {
+                var securepayCardComponentElem = document.querySelector('.securepay-card-component');
+                var securepayCardComponentId = securepayCardComponentElem ? securepayCardComponentElem.id : null;
+                if(securepayCardComponentId){
+                    window.mySecurePayUI = new securePayUI.init({ 
+                        containerId: securepayCardComponentId,
+                        scriptId: 'securepay-ui-js',
+                        clientId: '".$this->clientIdFinal."',
+                        merchantCode: '".$this->merchantCodeFinal."',
+                        style: {
+                            backgroundColor: '#" . $this->backgroundColour . "',
+                            label: {
                             font: {
-                                family: '" . $this->inputFontFamily . "',
-                                size: '" . $this->inputFontSize . "',
-                                color: '#" . $this->inputFontColour . "'
+                                family: '" . $this->labelFontFamily . "',
+                                size: '" . $this->labelFontSize . "',
+                                color: '#" . $this->labelFontColour . "'
+                            }
+                            },
+                            input: {
+                                font: {
+                                    family: '" . $this->inputFontFamily . "',
+                                    size: '" . $this->inputFontSize . "',
+                                    color: '#" . $this->inputFontColour . "'
+                                }
+                            }
+                        },
+                        card: { // card specific config options / callbacks
+                            showCardIcons: " . ($this->showCardIcons ? 'true' : 'false') . ",
+                            allowedCardTypes: " . Json::encode($this->allowedCardTypes) . ",
+                            onFormValidityChange: function(valid) {
+                                window.mySecurePayUI.tokenise();
+                                
+                            },
+                            onTokeniseSuccess: async function(tokenisedCard) {
+                                console.log(tokenisedCard);
+                                document.querySelector('input.securepayCardToken').value = tokenisedCard.token;
+                                document.querySelector('input.securepayCardCreatedAt').value = tokenisedCard.createdAt;
+                                document.querySelector('input.securepayCardScheme').value = tokenisedCard.scheme;
+                            },
+                            onTokeniseError: function(errors) {
+                                errors = typeof errors === 'string' ? JSON.parse(errors) : errors;
+                                //displayErrors(errors);
                             }
                         }
-                    },
-                    card: { // card specific config options / callbacks
-                        showCardIcons: " . ($this->showCardIcons ? 'true' : 'false') . ",
-                        allowedCardTypes: " . Json::encode($this->allowedCardTypes) . ",
-                        onFormValidityChange: function(valid) {
-                            window.mySecurePayUI.tokenise();
-                            
-                        },
-                        onTokeniseSuccess: async function(tokenisedCard) {
-                            console.log(tokenisedCard);
-                            document.getElementById('cartToken').value = tokenisedCard.token;
-                            document.getElementById('cartCreatedAt').value = tokenisedCard.createdAt;
-                            document.getElementById('cartScheme').value = tokenisedCard.scheme;
-                        },
-                        onTokeniseError: function(errors) {
-                            errors = typeof errors === 'string' ? JSON.parse(errors) : errors;
-                            //displayErrors(errors);
-                        }
-                    }
-                });
+                    });
+                }
+                else{
+                    console.log('SecurePay card component element not found on HTML DOM');
+                }
             });";
 
             $view->registerJs($js, View::POS_END);

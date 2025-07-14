@@ -2,7 +2,7 @@
 
 This guide helps resolve common issues with the SecurePay payment gateway integration for Craft Commerce.
 
-**Plugin**: `brightlabs/craft-securepay` v1.3.1  
+**Plugin**: `brightlabs/craft-securepay` v1.3.2  
 **Support**: [Bitbucket Issues](https://bitbucket.org/bright-labs/craftcommerce-securepay/issues) | Craft Discord/Slack  
 **SecurePay Support**: For issues with your SecurePay account, please contact SecurePay directly.
 
