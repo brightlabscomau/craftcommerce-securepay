@@ -2,7 +2,7 @@
 
 This guide provides comprehensive instructions for integrating the SecurePay payment gateway with Craft Commerce, following the [official SecurePay API documentation](https://auspost.com.au/payments/docs/securepay/?javascript#integrating-with-securepay).
 
-**Plugin**: `brightlabs/craft-securepay` v1.3.1 
+**Plugin**: `brightlabs/craft-securepay` v1.3.2 
 **Developer**: [Brightlabs](https://brightlabs.com.au/)  
 **API**: SecurePay API v2 with OAuth 2.0
 

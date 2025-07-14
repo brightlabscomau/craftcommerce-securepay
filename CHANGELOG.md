@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2025-07-14
+
+### Fixed
+- **JavaScript Syntax Error**: Fixed attribute selector escaping in payment form template
+- **Form Element Selection**: Improved form element detection and selection logic
+- **Hidden Field Classes**: Updated CSS class names for better consistency (`securepayCardToken`, `securepayCardScheme`, `securepayCardCreatedAt`)
+- **Form Submission**: Enhanced form submission logic with better element detection
+- **Page Reload Timing**: Increased error page reload delay from 1 second to 2 seconds for better user experience
+
+### Technical Improvements
+- Better DOM element selection in payment form JavaScript
+- Improved form element detection using `closest()` method
+- Enhanced error handling without unnecessary try-catch blocks
+- More consistent CSS class naming convention
+
 ## [1.3.1] - 2025-06-30
 
 ### Added

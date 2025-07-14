@@ -157,6 +157,7 @@ To use the test environment, simply enable **Sandbox Mode** in the gateway setti
 
 ### 3D Secure Testing
 When 3D Secure 2.0 is enabled, test cards may trigger authentication challenges:
+
 - Follow the authentication flow as prompted
 - Card Holder Name: Test Card
 - Expiry date (YYMM): value must be 2508
