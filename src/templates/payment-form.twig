@@ -1,6 +1,20 @@
 {# @var gateway brightlabs\securepay\gateways\Gateway #}
 {# @var paymentForm brightlabs\securepay\models\SecurePayPaymentForm #}
 
+{# CSS asset bundle is registered in Gateway.php #}
+{# Register CSS custom properties for dynamic gateway settings #}
+{% do view.registerCss("
+    :root {
+        --securepay-bg-color: #" ~ gateway.backgroundColour ~ ";
+        --securepay-label-font-family: " ~ gateway.labelFontFamily ~ ";
+        --securepay-label-font-size: " ~ gateway.labelFontSize ~ ";
+        --securepay-label-font-color: #" ~ gateway.labelFontColour ~ ";
+        --securepay-input-font-family: " ~ gateway.inputFontFamily ~ ";
+        --securepay-input-font-size: " ~ gateway.inputFontSize ~ ";
+        --securepay-input-font-color: #" ~ gateway.inputFontColour ~ ";
+    }
+") %}
+
 {% import "_includes/forms" as forms %}
 {% if gateway.isCredentialValid %}
     <div class="securepay-payment-form" id="securepay-payment-form">
@@ -10,16 +24,20 @@
                 <div class="cc-number-error"><p>Please enter card holder name</p></div>
                 <input maxlength="255" id="cardholderName" class="securepayCardholderName" name="cardholderName" required="" tabindex="1" title="Enter your card number" type="text">
             </div>
-            <iframe id="3ds-v2-challenge-iframe" name="3ds-v2-challenge-iframe" style="width:100%;height:0px"></iframe>
+            <iframe id="3ds-v2-challenge-iframe" class="_3ds-v2-challenge-iframe" name="3ds-v2-challenge-iframe" style="width:100%;height:0px"></iframe>
         {% endif %}
         {# SecurePay UI Component Container #}
         <div id="securepay-card-component" class="securepay-card-component">
             {# This will be populated by the SecurePay JavaScript SDK #}
         </div>
         {# Hidden fields for Craft Commerce form submission #}
-        <input type="hidden" name="scheme" class="securepayCardScheme" value="">
-        <input type="hidden" name="createdAt" class="securepayCardCreatedAt" value="">
-        <input type="hidden" name="token" class="securepayCardToken" value="">
+        <input type="hidden" name="cardToken" class="securepayCardToken" value="">
+        <input type="hidden" name="cardExpiryMonth" class="securepayCardExpiryMonth" value="">
+        <input type="hidden" name="cardExpiryYear" class="securepayCardExpiryYear" value="">
+        <input type="hidden" name="cardBin" class="securepayCardBin" value="">
+        <input type="hidden" name="cardLast4" class="securepayCardLast4" value="">
+        <input type="hidden" name="cardScheme" class="securepayCardScheme" value="">
+        <input type="hidden" name="cardCreatedAt" class="securepayCardCreatedAt" value="">
 
         {# Payment processing status #}
         <div id="payment-processing" class="payment-processing" style="display: none;">
@@ -28,193 +46,11 @@
         </div>
         <div class="errors"></div>
     </div>
-    {% if gateway.threeDSecure %}
-        {% do view.registerCss("
-            .securepay-card-component iframe{
-                width: 100%;
-            }
-            .securepay-payment-form{
-                background-color: #" ~ gateway.backgroundColour ~ ";
-                padding:15px;
-            }
-            .securepay-payment-form .input-wrapper{
-                margin:0 0 20px;
-                display:flex;
-                gap: 10px;
-                flex-direction:column;
-            }
-            .securepay-payment-form label {
-                font-family: " ~ gateway.labelFontFamily ~ "; 
-                font-size: " ~ gateway.labelFontSize ~ "; 
-                color: #" ~ gateway.labelFontColour ~ "; 
-                font-weight: 700;
-                line-height:1.4;
-            }
-            .securepay-payment-form .cc-number-error{
-                line-height:1.4;
-                margin-top:-6px;
-                display: none;   
-            }
-            .securepay-payment-form .ng-invalid .cc-number-error{
-                display: block;
-            }
-            .securepay-payment-form .cc-number-error p {
-                color: #bc111e;
-                font-family: Helvetica,sans-serif;
-                font-size: 12px;
-                font-weight: 400;
-                padding: 0;
-            }
-
-            .securepay-payment-form input[name=cardholderName] {
-                font-family:" ~ gateway.inputFontFamily ~ "; 
-                font-size: " ~ gateway.inputFontSize ~ "; 
-                color: #" ~ gateway.inputFontColour ~ ";
-                box-shadow:none;
-            }
-            .securepay-payment-form input[name=cardholderName]:focus {
-                padding: 6px 9px;
-                border: 2px solid #807370;
-            }
-            .securepay-payment-form input[name=cardholderName]:hover {
-                border-color: #807370;
-            }
-            .securepay-payment-form .ng-invalid input[name=cardholderName]{
-                border-color:#bc111e;
-            }
-            .securepay-payment-form .errors{
-                color: #bc111e;
-                padding: 0;
-            }
-        ") %}
-    {% else %}
-        {% do view.registerCss("
-            .securepay-card-component iframe{
-                width: 100%;
-            }
-            
-        ") %}
-    {% endif %}
-    {% do view.registerJs("
-    let form;
-    let cardholderNameInput;
-    let cartTokenInput;
-    let cartScheme;
-    let cardholderNameWrapper;
-    let submitButton;
-    let submitButtonText = 'Processing...';
-    let securePayThreedsUI;
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Attempt to get the form and required elements
-
-        // Get the form that contains the div.securepay-payment-form
-        var securepayDiv = document.querySelector('div.securepay-payment-form');
-        if (securepayDiv) {
-            form = securepayDiv.closest('form');
-        }
-        cardholderNameInput = form ? form.querySelector('input.securepayCardholderName') : null;
-        cartTokenInput = form ? form.querySelector('input.securepayCardToken') : null;
-        cartScheme = form ? form.querySelector('input.securepayCardScheme') : null;
-        cardholderNameWrapper = cardholderNameInput ? cardholderNameInput.closest('.input-wrapper') : null;
-        submitButton = form ? form.querySelector('button[type=\"submit\"]') : null;
-        
-        if (submitButton) {
-            submitButton.addEventListener('click', function(e) {
-                // Prevent default form submission
-                e.preventDefault();
-                
-                // Validate cardholder name
-                if(cardholderNameInput){
-                    if (!cardholderNameInput.value.trim()) {
-                        cardholderNameWrapper.classList.add('ng-invalid');
-                        return false;
-                    }
-                }
-                if(!cartTokenInput.value.trim()){
-                    return false;
-                }
-                if(cardholderNameWrapper){
-                    cardholderNameWrapper.classList.remove('ng-invalid');
-                    securePayThreedsUI.startThreeDS();
-                }
-                else{
-                    form.requestSubmit();
-                }
-                submitButton.disabled = true;
-                text =  submitButton.textContent;
-                submitButton.textContent = submitButtonText;
-                submitButtonText = text;
-                
-            });
-        }
-        // Remove ng-invalid class when user starts typing
-        if(cardholderNameInput){
-            cardholderNameInput.addEventListener('input', function() {
-                if (this.value.trim()) {
-                    cardholderNameWrapper.classList.remove('ng-invalid');
-                }
-            });
-        }
-    });
-
-    function displayErrors(errors){
-        if (errors && errors.errors && Array.isArray(errors.errors)) {
-            var errorContainer = document.querySelector('#securepay-payment-form .errors');
-            errorContainer.innerHTML = '';
-            if (errorContainer) {
-                var errorList = document.createElement('ul');
-                errors.errors.forEach(function(error) {
-                    errorList.innerHTML += '<li>ERROR: ' + error.detail + '.<br/>The page will be refresh.</li>';
-                });
-                errorContainer.appendChild(errorList);
-            }
-        }
-        
-        if (submitButton) {
-            submitButton.disabled = false;
-            var currentText = submitButton.textContent;
-            submitButton.textContent = submitButtonText;
-            submitButtonText = currentText;
-        }
-        setTimeout(function() {
-            window.location.reload();
-        }, 2000);
-    }
-    ", constant('craft\\web\\View::POS_END')) %}
-{% else %}
+{% else %}    
 <div class="securepay-error-message">
     <div class="error-icon">⚠️</div>
     <h3>Payment Gateway Configuration Error</h3>
     <p>We're unable to process payments at the moment due to a configuration issue with our payment gateway. Please contact our support team to resolve this issue.</p>
     <p><strong>Error:</strong> Invalid SecurePay credentials detected. Please verify your gateway configuration in the admin panel.</p>
 </div>
-{% do view.registerCss("
-.securepay-error-message{
-        border:1px solid red;
-        border-radius: 4px;
-        padding: 20px;
-        margin: 20px 0;
-        background-color: #fff5f5;
-        color: #c53030;
-        text-align: center;
-    }
-    .securepay-error-message .error-icon {
-        font-size: 2rem;
-        margin-bottom: 10px;
-    }
-    .securepay-error-message h3 {
-        margin: 0 0 10px 0;
-        color: #c53030;
-        font-size: 1.2rem;
-    }
-    .securepay-error-message p {
-        margin: 5px 0;
-        line-height: 1.5;
-    }
-    .securepay-error-message strong {
-        font-weight: 600;
-    }
-}
-") %}
 {% endif %}

@@ -261,9 +261,27 @@
     <div class="instructions">
         <p>{{ 'This gateway integrates with SecurePay API v2 following the official documentation patterns.'|t('commerce') }}</p>
         <ul>
-            <li>{{ 'API Documentation: '|t('commerce') }}<a href="https://securepay-docs.readme.io/docs/getting-started-with-securepay-api" target="_blank">SecurePay API Docs</a></li>
+            <li>{{ 'API Documentation: '|t('commerce') }}<a href="https://securepay-docs.readme.io/docs/getting-started" target="_blank">SecurePay API Docs</a></li>
             <li>{{ 'Craft Commerce Integration: '|t('commerce') }}<a href="https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html" target="_blank">Payment Gateway Types</a></li>
-            <li>{{ 'Test Cards: Visa 4111111111111111 OR 4242424242424242, Mastercard 5555555555554444, American Express 378282246310005' |t('commerce') }}</li>
+            <li>
+                <strong>{{ 'Test Cards:'|t('commerce') }}</strong>
+                <ul>
+                    <li>{{ 'Visa:'|t('commerce') }} <strong>4111111111111111</strong> {{ 'OR'|t('commerce') }} <strong>4242424242424242</strong></li>
+                    <li>{{ 'Mastercard:'|t('commerce') }} <strong>5555555555554444</strong></li>
+                    <li>{{ 'AMEX:'|t('commerce') }} <strong>378282246310005</strong></li>
+                    <li><a href="https://securepay-docs.readme.io/docs/testing" target="_blank">More Info</a></li>
+                </ul>
+            </li>
+            <li>
+                <strong>{{ '3DS2 Testing:'|t('commerce') }}</strong> 
+                <ul>
+                <li>{{ 'Visa:'|t('commerce') }} <strong>4100000000000100</strong></li>
+                <li>{{ 'Mastercard:'|t('commerce') }} <strong>5100000000000107</strong></li>
+                <li>{{ 'AMEX:'|t('commerce') }} <strong>3400000000000108</strong></li>
+                <li>{{ 'Card Holder Name:'|t('commerce') }} <strong>{{ 'Test Card or an empty value'|t('commerce') }}</strong></li>
+                <li>{{ 'Expiry date (YYMM):'|t('commerce') }} <strong>{{ '2508 or an empty value'|t('commerce') }}</strong></li>
+                <li><a href="https://securepay-docs.readme.io/docs/3ds2-testing" target="_blank">More Info</a></li>
+                </li>
         </ul>
     </div>
 </div> 

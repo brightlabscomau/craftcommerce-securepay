@@ -137,7 +137,7 @@ class SecurePayResponse implements RequestResponseInterface
             }
         }
         elseif(isset($this->data['gatewayResponseMessage'])){
-            $message = $this->data['gatewayResponseMessage'];
+            $message = 'SecurePay: ' . $this->data['gatewayResponseMessage'];
         }
         return $message;
     }
