@@ -1,0 +1,99 @@
+/* SecurePay Payment Form Styles */
+
+.securepay-card-component iframe {
+    width: 100%;
+}
+
+.securepay-payment-form {
+    background-color: var(--securepay-bg-color, #ffffff);
+    padding: 15px;
+}
+
+.securepay-payment-form .input-wrapper {
+    margin: 0 0 20px;
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+}
+
+.securepay-payment-form label {
+    font-family: var(--securepay-label-font-family, inherit);
+    font-size: var(--securepay-label-font-size, 1rem);
+    color: var(--securepay-label-font-color, #000000);
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.securepay-payment-form .cc-number-error {
+    line-height: 1.4;
+    margin-top: -6px;
+    display: none;
+}
+
+.securepay-payment-form .ng-invalid .cc-number-error {
+    display: block;
+}
+
+.securepay-payment-form .cc-number-error p {
+    color: #bc111e;
+    font-family: Helvetica, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    padding: 0;
+}
+
+.securepay-payment-form input[name=cardholderName] {
+    font-family: var(--securepay-input-font-family, inherit);
+    font-size: var(--securepay-input-font-size, 1rem);
+    color: var(--securepay-input-font-color, #000000);
+    box-shadow: none;
+}
+
+.securepay-payment-form input[name=cardholderName]:focus {
+    padding: 6px 9px;
+    border: 2px solid #807370;
+}
+
+.securepay-payment-form input[name=cardholderName]:hover {
+    border-color: #807370;
+}
+
+.securepay-payment-form .ng-invalid input[name=cardholderName] {
+    border-color: #bc111e;
+}
+
+.securepay-payment-form .errors {
+    color: #bc111e;
+    padding: 0;
+}
+
+/* Error Message Styles */
+.securepay-error-message {
+    border: 1px solid red;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+    background-color: #fff5f5;
+    color: #c53030;
+    text-align: center;
+}
+
+.securepay-error-message .error-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.securepay-error-message h3 {
+    margin: 0 0 10px 0;
+    color: #c53030;
+    font-size: 1.2rem;
+}
+
+.securepay-error-message p {
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+.securepay-error-message strong {
+    font-weight: 600;
+}

@@ -2,7 +2,7 @@
 
 This plugin provides a SecurePay payment gateway integration for Craft Commerce, implementing the [official SecurePay API v2](https://securepay-docs.readme.io/docs/getting-started-with-securepay-api) using the recommended JavaScript SDK for enhanced security.
 
-**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.3.0 | **Package**: `brightlabs/craft-securepay`
+**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.4.1 | **Package**: `brightlabs/craft-securepay`
 
 ## 🚀 Features
 
@@ -11,19 +11,22 @@ This plugin provides a SecurePay payment gateway integration for Craft Commerce,
 - **JavaScript SDK Integration**: Enhanced security with client-side tokenization. The plugin handles all SDK configuration and rendering automatically.
 - **Purchase Transactions**: Supports immediate capture of funds (purchase).
 - **Authorisation and Capture Workflows**: Supports authorise now, capture later workflows for delayed payment processing.
+- **Stored Payment Methods**: Full support for saving and managing customer payment methods for future use.
 - **Full and Partial Refund**: Supports full and partial refunds only for AUD transactions.
 - **Sandbox Testing**: Complete support for SecurePay's sandbox environment with pre-configured test credentials.
 
 ### Security & Authentication
 - **PCI DSS SAQ-A Compliant**: Designed for the highest level of PCI compliance by ensuring no sensitive card data ever touches your server.
 - **OAuth 2.0**: Secure API authentication with automatic token management and 24-hour caching for improved performance.
-- **3D Secure 2.0**: Full implementation of 3D Secure 2.0 authentication for enhanced security and fraud prevention.
+- **3D Secure 2.0**: Full implementation of 3D Secure 2.0 authentication for enhanced security and fraud prevention, including support for stored payment methods.
+- **Secure Payment Storage**: Stored payment methods are tokenised and managed securely through SecurePay's payment instrument system.
 
 ### Admin & Configuration Features
 - **Full Admin Configuration**: All settings are managed within the Craft Commerce gateway settings.
 - **Extensive Styling Options**: Customise the look and feel of the payment form directly from the gateway settings, including colours, fonts, and more.
 - **Card Type Configuration**: Easily select which card types are allowed for payment.
 - **3D Secure Toggle**: Enable or disable 3D Secure 2.0 authentication per gateway.
+- **Payment Source Management**: Complete integration with Craft Commerce's payment source system for storing and managing customer payment methods.
 
 ## 📋 Requirements
 
@@ -186,6 +189,8 @@ The plugin provides logging for key events and errors, which can be found in `st
 | Authorise Payment | `POST` | `/v2/payments/preauth` | ✅ Implemented |
 | Capture Payment | `POST` | `/v2/payments/{id}/capture` | ✅ Implemented |
 | 3D Secure Authentication | `POST` | `/v2/payments` | ✅ Implemented |
+| Create Payment Instrument | `POST` | `/v2/payment-instruments` | ✅ Implemented |
+| Delete Payment Instrument | `DELETE` | `/v2/payment-instruments/{id}` | ✅ Implemented |
 
 ## 📚 Documentation
 
@@ -205,17 +210,12 @@ This plugin is licensed under the MIT License.
 ## 📈 Roadmap
 
 ### Future Releases
-- [ ] Enhanced 3D Secure 2.0 JavaScript Integration with unlimited validation requests
-- [ ] Adding optional merchantRiskData to 3D Secure 2.0 JavaScript Integration
-- [ ] Improved JavaScript SDK implementation and error handling
 - [ ] Fraud Detection Features (FraudGuard)
 - [ ] Apple Pay Support
 - [ ] PayPal Payments
 - [ ] Direct Entry Payments
 - [ ] Scheduled Payments
 - [ ] Dynamic Currency Conversion (DCC)
-- [ ] Stored Payment Methods (Payment Sources)
-
 ---
 
 **Note**: This plugin follows the official SecurePay documentation and integrates with the recommended `fgct/securepay-api` PHP library for optimal compatibility and security. 

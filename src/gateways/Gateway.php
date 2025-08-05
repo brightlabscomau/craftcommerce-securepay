@@ -24,6 +24,10 @@ use SecurePayApi\Request\CardPayment\RefundPaymentRequest;
 use SecurePayApi\Request\CardPayment\CreatePreAuthRequest;
 use SecurePayApi\Request\CardPayment\CapturePreAuthRequest;
 use SecurePayApi\Request\CardPayment\InitiatePaymentOrderRequest;
+use SecurePayApi\Request\CardPayment\CreatePaymentInstrumentRequest;
+use SecurePayApi\Request\CardPayment\DeletePaymentInstrumentRequest;
+use craft\elements\User;
+
 /**
  * SecurePay Gateway
  *
@@ -141,15 +145,33 @@ class Gateway extends BaseGateway
     /**
      * @var string|null tokenised card token
      */
-    private ?string $cardTokenise = null;
+    private ?string $cardToken = null;
     /**
      * @var string|null tokenised card Created At
      */
-    private ?string $cardCreatedAt = null;
+    private ?string $cardExpiryMonth = null;
+    /**
+     * @var string|null tokenised card Expiry Year
+     */
+    private ?string $cardExpiryYear = null;
+    /**
+     * @var string|null tokenised card Bin
+     */
+    private ?string $cardBin = null;
+    /**
+     * @var string|null tokenised card Last 4
+     */
+    private ?string $cardLast4 = null;
     /**
      * @var string|null tokenised card Scheme
      */
     private ?string $cardScheme = null;
+    /**
+     * @var string|null tokenised card Created At
+     */
+    private ?string $cardCreatedAt = null;
+    
+   
 
     private string $defaultCurrency = 'AUD';
 
@@ -198,8 +220,88 @@ class Gateway extends BaseGateway
     {
         return Craft::t('commerce', 'SecurePay');
     }
+     // Support Methods (Required by Commerce)
+    // =========================================================================
 
-    
+    /**
+     * @inheritdoc
+     */
+    public function supportsAuthorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsCapture(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsCompleteAuthorize(): bool
+    {
+        return false; // For 3D Secure and webhook completions
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsCompletePurchase(): bool
+    {
+        return true; // For 3D Secure and webhook completions
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsPaymentSources(): bool
+    {
+        return true; // Could be true if implementing payment instruments
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsPurchase(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsRefund(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsPartialRefund(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsWebhooks(): bool
+    {
+        return true; // For 3D Secure, fraud detection, and async notifications
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function supportsPartialPayments(): bool
+    {
+        return true;
+    }
     /**
      * @inheritdoc
      * for displaying the settings in the admin panel
@@ -231,6 +333,9 @@ class Gateway extends BaseGateway
         // Always register JavaScript SDK
         $this->registerJavaScriptSDK($view);
         
+        // Register SecurePay CSS and JavaScript asset bundle
+        $view->registerAssetBundle(\brightlabs\securepay\assets\SecurePayAsset::class);
+        
         $html = $view->renderTemplate('securepay/payment-form', $params);
 
         $view->setTemplateMode($previousMode);
@@ -257,7 +362,36 @@ class Gateway extends BaseGateway
                 'src' => $jsUrl,
                 'id'  => 'securepay-ui-js'
             ]); 
-            $js = "";
+
+            // Prepare configuration object
+            $config = [
+                'threeDSecure' => $this->threeDSecure,
+                'cardComponent' => [
+                    'clientId' => $this->clientIdFinal,
+                    'merchantCode' => $this->merchantCodeFinal,
+                    'style' => [
+                        'backgroundColor' => '#' . $this->backgroundColour,
+                        'label' => [
+                            'font' => [
+                                'family' => $this->labelFontFamily,
+                                'size' => $this->labelFontSize,
+                                'color' => '#' . $this->labelFontColour
+                            ]
+                        ],
+                        'input' => [
+                            'font' => [
+                                'family' => $this->inputFontFamily,
+                                'size' => $this->inputFontSize,
+                                'color' => '#' . $this->inputFontColour
+                            ]
+                        ]
+                    ],
+                    'showCardIcons' => $this->showCardIcons,
+                    'allowedCardTypes' => $this->allowedCardTypes
+                ]
+            ];
+
+            // Handle 3D Secure configuration
             if($this->threeDSecure){
                 $initiatePayment = $this->initiatePayment();
                 Craft::$app->getSession()->set('initiatePayment', $initiatePayment);
@@ -269,137 +403,46 @@ class Gateway extends BaseGateway
                         'src' => $jsUrl3DS2,
                         'id'  => 'securepay-ui-js-3ds2'
                     ]); 
-                    $js .= "document.addEventListener('DOMContentLoaded', function() {
-                        var sp3dsConfig = {
-                            clientId: '".$initiatePayment['threedSecureDetails']['providerClientId']."',
-                            iframe: document.getElementById('3ds-v2-challenge-iframe'),
-                            token: '".$initiatePayment['orderToken']."',
-                            simpleToken: '".$initiatePayment['threedSecureDetails']['simpleToken']."',
-                            threeDSSessionId: '".$initiatePayment['threedSecureDetails']['sessionId']."',
-                            onRequestInputData: function(){
-                                cardholderName = document.querySelector('input.securepayCardholderName') ? document.querySelector('input.securepayCardholderName').value : '';
-                                cardToken = document.querySelector('input.securepayCardToken') ? document.querySelector('input.securepayCardToken').value : '';
-                                var requestData = {
-                                    'cardTokenInfo':{
-                                        'cardholderName':cardholderName,
-                                        'cardToken':cardToken
-                                    },
-                                    'accountData':{
-                                        'emailAddress':'".substr($this->order->email, 0, $this->maxEmailLength)."',
-                                    },";
-                    if($billingAddress){
-                    $js .= "        'billingAddress':{
-                                        'city':'".substr($billingAddress->locality, 0, $this->maxAddressFieldLength)."',
-                                        'state':'".$billingAddress->administrativeArea."',
-                                        'country':'".$billingAddress->countryCode."',
-                                        'zipCode':'".substr($billingAddress->postalCode, 0, $this->maxZipCodeLength)."',
-                                        'streetAddress':'".substr($billingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
-                                        'detailedStreetAddress':'".substr($billingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
-                                        'detailedStreetAddressAdditional':'".substr($billingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
-                                    },";
-                    }
-                    if($shippingAddress){
-                    $js .= "
-                                    'shippingAddress':{
-                                        'city':'".substr($shippingAddress->locality, 0, $this->maxAddressFieldLength)."',
-                                        'state':'".$shippingAddress->administrativeArea."',
-                                        'country':'".$shippingAddress->countryCode."',
-                                        'zipCode':'".substr($shippingAddress->postalCode, 0, $this->maxZipCodeLength)."',
-                                        'streetAddress':'".substr($shippingAddress->addressLine1, 0, $this->maxAddressFieldLength)."',
-                                        'detailedStreetAddress':'".substr($shippingAddress->addressLine2, 0, $this->maxAddressFieldLength)."',
-                                        'detailedStreetAddressAdditional':'".substr($shippingAddress->addressLine3, 0, $this->maxAddressFieldLength)."'
-                                    },";
-                    }
-                    $js .= "
-                                    'threeDSInfo':{
-                                        'threeDSReqAuthMethodInd':'01'
-                                    }
-                                };
-                                console.log(requestData);
-                                return requestData;
-                            },
-                            onThreeDSResultsResponse: async function(response){
-                                if(response.authenticationValue && response.liabilityShiftIndicator == 'Y'){
-                                    form.requestSubmit();
-                                }
-                                else{
-                                    var errors = {
-                                        'errors': [
-                                            {
-                                                'code': '3DS2_CARD_UNSUPPORTED',
-                                                'detail': 'Card Unsupported for 3D Secure'
-                                            }
-                                        ]
-                                    };
-                                    displayErrors(errors);
-                                }
-                            },
-                            onThreeDSError: async function(errors){
-                                displayErrors(errors);
-                            }
-                        };
 
-                        securePayThreedsUI = new window.SecurePayThreedsUI();
-                        securePayThreedsUI = securePayThreedsUI;
-                        securePayThreedsUI.initThreeDS(sp3dsConfig);
-                    });";
+                    $threeDSecureData = [
+                        'clientId' => $initiatePayment['threedSecureDetails']['providerClientId'],
+                        'token' => $initiatePayment['orderToken'],
+                        'simpleToken' => $initiatePayment['threedSecureDetails']['simpleToken'],
+                        'threeDSSessionId' => $initiatePayment['threedSecureDetails']['sessionId'],
+                        'emailAddress' => substr($this->order->email, 0, $this->maxEmailLength)
+                    ];
+
+                    if($billingAddress){
+                        $threeDSecureData['billingAddress'] = [
+                            'city' => substr($billingAddress->locality, 0, $this->maxAddressFieldLength),
+                            'state' => $billingAddress->administrativeArea,
+                            'country' => $billingAddress->countryCode,
+                            'zipCode' => substr($billingAddress->postalCode, 0, $this->maxZipCodeLength),
+                            'streetAddress' => substr($billingAddress->addressLine1, 0, $this->maxAddressFieldLength),
+                            'detailedStreetAddress' => substr($billingAddress->addressLine2, 0, $this->maxAddressFieldLength),
+                            'detailedStreetAddressAdditional' => substr($billingAddress->addressLine3, 0, $this->maxAddressFieldLength)
+                        ];
+                    }
+
+                    if($shippingAddress){
+                        $threeDSecureData['shippingAddress'] = [
+                            'city' => substr($shippingAddress->locality, 0, $this->maxAddressFieldLength),
+                            'state' => $shippingAddress->administrativeArea,
+                            'country' => $shippingAddress->countryCode,
+                            'zipCode' => substr($shippingAddress->postalCode, 0, $this->maxZipCodeLength),
+                            'streetAddress' => substr($shippingAddress->addressLine1, 0, $this->maxAddressFieldLength),
+                            'detailedStreetAddress' => substr($shippingAddress->addressLine2, 0, $this->maxAddressFieldLength),
+                            'detailedStreetAddressAdditional' => substr($shippingAddress->addressLine3, 0, $this->maxAddressFieldLength)
+                        ];
+                    }
+
+                    $config['threeDSecureData'] = $threeDSecureData;
                 }
             }
 
-            $js .= "
-            // Initialize SecurePay when DOM is loaded
-            document.addEventListener('DOMContentLoaded', function() {
-                var securepayCardComponentElem = document.querySelector('.securepay-card-component');
-                var securepayCardComponentId = securepayCardComponentElem ? securepayCardComponentElem.id : null;
-                if(securepayCardComponentId){
-                    window.mySecurePayUI = new securePayUI.init({ 
-                        containerId: securepayCardComponentId,
-                        scriptId: 'securepay-ui-js',
-                        clientId: '".$this->clientIdFinal."',
-                        merchantCode: '".$this->merchantCodeFinal."',
-                        style: {
-                            backgroundColor: '#" . $this->backgroundColour . "',
-                            label: {
-                            font: {
-                                family: '" . $this->labelFontFamily . "',
-                                size: '" . $this->labelFontSize . "',
-                                color: '#" . $this->labelFontColour . "'
-                            }
-                            },
-                            input: {
-                                font: {
-                                    family: '" . $this->inputFontFamily . "',
-                                    size: '" . $this->inputFontSize . "',
-                                    color: '#" . $this->inputFontColour . "'
-                                }
-                            }
-                        },
-                        card: { // card specific config options / callbacks
-                            showCardIcons: " . ($this->showCardIcons ? 'true' : 'false') . ",
-                            allowedCardTypes: " . Json::encode($this->allowedCardTypes) . ",
-                            onFormValidityChange: function(valid) {
-                                window.mySecurePayUI.tokenise();
-                                
-                            },
-                            onTokeniseSuccess: async function(tokenisedCard) {
-                                console.log(tokenisedCard);
-                                document.querySelector('input.securepayCardToken').value = tokenisedCard.token;
-                                document.querySelector('input.securepayCardCreatedAt').value = tokenisedCard.createdAt;
-                                document.querySelector('input.securepayCardScheme').value = tokenisedCard.scheme;
-                            },
-                            onTokeniseError: function(errors) {
-                                errors = typeof errors === 'string' ? JSON.parse(errors) : errors;
-                                //displayErrors(errors);
-                            }
-                        }
-                    });
-                }
-                else{
-                    console.log('SecurePay card component element not found on HTML DOM');
-                }
-            });";
-
-            $view->registerJs($js, View::POS_END);
+            // Register configuration as JavaScript variable
+            $configJs = 'window.SecurePayConfig = ' . Json::encode($config) . ';';
+            $view->registerJs($configJs, View::POS_BEGIN);
         }
     }
 
@@ -408,13 +451,36 @@ class Gateway extends BaseGateway
      */
     public function getPaymentFormModel(): BasePaymentForm
     {
-        $this->cardTokenise = Craft::$app->getRequest()->getBodyParam('token');
-        $this->cardCreatedAt = Craft::$app->getRequest()->getBodyParam('createdAt');
-        $this->cardScheme = Craft::$app->getRequest()->getBodyParam('scheme');
+        $request = Craft::$app->getRequest();
+        // when the payment source added via the user panel
+        if($request->getBodyParam('paymentForm')){
+            $paymentForm = $request->getBodyParam('paymentForm')['creditCardSecurepay'];
+            $this->cardToken =  $paymentForm ['cardToken'];
+            $this->cardExpiryMonth = $paymentForm ['cardExpiryMonth'];
+            $this->cardExpiryYear = $paymentForm ['cardExpiryYear'];
+            $this->cardBin = $paymentForm ['cardBin'];
+            $this->cardLast4 = $paymentForm ['cardLast4'];
+            $this->cardCreatedAt = $paymentForm ['cardCreatedAt'];
+            $this->cardScheme = $paymentForm ['cardScheme'];
+        }
+        // when the payment process via checkout page
+        else{
+            $this->cardToken =  $request->getBodyParam('cardToken');
+            $this->cardExpiryMonth = $request->getBodyParam('cardExpiryMonth');
+            $this->cardExpiryYear = $request->getBodyParam('cardExpiryYear');
+            $this->cardBin = $request->getBodyParam('cardBin');
+            $this->cardLast4 = $request->getBodyParam('cardLast4');
+            $this->cardCreatedAt = $request->getBodyParam('cardCreatedAt');
+            $this->cardScheme = $request->getBodyParam('cardScheme');
+        }
         $securePayPaymentForm = new SecurePayPaymentForm();
-        $securePayPaymentForm->token = $this->cardTokenise;
-        $securePayPaymentForm->createdAt = $this->cardCreatedAt;
-        $securePayPaymentForm->scheme = $this->cardScheme;
+        $securePayPaymentForm->cardToken = $this->cardToken;
+        $securePayPaymentForm->cardExpiryMonth = $this->cardExpiryMonth;
+        $securePayPaymentForm->cardExpiryYear = $this->cardExpiryYear;
+        $securePayPaymentForm->cardBin = $this->cardBin;
+        $securePayPaymentForm->cardLast4 = $this->cardLast4;
+        $securePayPaymentForm->cardScheme = $this->cardScheme;
+        $securePayPaymentForm->cardCreatedAt = $this->cardCreatedAt;
         return $securePayPaymentForm;
     }
 
@@ -520,21 +586,71 @@ class Gateway extends BaseGateway
 
     /**
      * @inheritdoc
+     * @since 1.4.1
      */
-    public function createPaymentSource(BasePaymentForm $sourceData, int $userId): PaymentSource
+    public function createPaymentSource(BasePaymentForm $sourceData, int $customerId): PaymentSource
     {
-        // SecurePay doesn't support stored payment methods in this basic implementation
-        // This could be extended to support payment instruments in the future
-        throw new \Exception('Payment sources are not supported by this gateway.');
+        // Is Craft request the commerce/pay controller action?
+        $request = Craft::$app->getRequest();
+        $description =  $request->getBodyParam('description');
+        $description = !empty($description) ? $description : $this->cardScheme .' card '. $this->cardBin .'••••'. $this->cardLast4;
+        $cardInfo = [
+            'cardToken' => $this->cardToken,
+            'cardExpiryMonth' => $this->cardExpiryMonth,
+            'cardExpiryYear' => $this->cardExpiryYear,
+            'cardBin' => $this->cardBin,
+            'cardLast4' => $this->cardLast4,
+            'cardScheme' => $this->cardScheme,
+            'cardCreatedAt' => $this->cardCreatedAt,
+        ];
+        try {   
+            $createPaymentInstrumentRequest = new CreatePaymentInstrumentRequest($this->credential->isLive(), $this->credential, $customerId, $this->cardToken, $this->_getOrderIp());
+            $createPaymentInstrumentResult = $createPaymentInstrumentRequest->execute()->toArray();
+            // check if there are errors in the response
+            if(isset($createPaymentInstrumentResult['errors'])){
+                Craft::error('createPaymentInstrumentRequest ERROR: '. json_encode($createPaymentInstrumentResult),__METHOD__);
+                throw new \Exception('Could not create payment source: ' . $createPaymentInstrumentResult['errors'][0]['detail']);
+            }
+            else{
+                Craft::info('createPaymentInstrumentRequest Response: '. json_encode($createPaymentInstrumentResult),__METHOD__);
+                $paymentSource = new PaymentSource();
+                $paymentSource->customerId = $customerId;
+                $paymentSource->gatewayId = $this->id;
+                $paymentSource->token = $this->cardToken;
+                $paymentSource->response = json_encode($cardInfo);
+                $paymentSource->description = $description;
+                return $paymentSource;
+            }
+
+        } catch (\Exception $e) {
+            Craft::error('SecurePay createPaymentSource error: ' . $e->getMessage(), __METHOD__);
+            throw new \Exception('Could not create payment source: ' . $e->getMessage());
+        }   
     }
 
     /**
      * @inheritdoc
+     * @since 1.4.1
      */
     public function deletePaymentSource($token): bool
     {
-        // Would delete stored payment instrument if supported
-        return false;
+        $customerId = Craft::$app->user->getIdentity()->id;
+        try {   
+            $deletePaymentInstrumentRequest = new DeletePaymentInstrumentRequest($this->credential->isLive(), $this->credential, $customerId, $token, $this->_getOrderIp());
+            $deletePaymentInstrumentResult = $deletePaymentInstrumentRequest->execute()->toArray();
+            // check if there are errors in the response
+            if(isset($deletePaymentInstrumentResult['errors'])){
+                Craft::error('deletePaymentInstrumentRequest ERROR: '. json_encode($deletePaymentInstrumentResult),__METHOD__);
+                return false;
+            }
+            else{
+                return true;
+            }
+
+        } catch (\Exception $e) {
+            Craft::error('SecurePay deletePaymentSource error: ' . $e->getMessage(), __METHOD__);
+            return false;            
+        }           
     }
   
 
@@ -567,88 +683,7 @@ class Gateway extends BaseGateway
         return $response;
     }
 
-    // Support Methods (Required by Commerce)
-    // =========================================================================
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsAuthorize(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsCapture(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsCompleteAuthorize(): bool
-    {
-        return false; // For 3D Secure and webhook completions
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsCompletePurchase(): bool
-    {
-        return true; // For 3D Secure and webhook completions
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsPaymentSources(): bool
-    {
-        return false; // Could be true if implementing payment instruments
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsPurchase(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsRefund(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsPartialRefund(): bool
-    {
-        return true;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsWebhooks(): bool
-    {
-        return true; // For 3D Secure, fraud detection, and async notifications
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function supportsPartialPayments(): bool
-    {
-        return true;
-    }
+   
 
     // Configuration Methods
     // =========================================================================
@@ -750,24 +785,26 @@ class Gateway extends BaseGateway
     private function createPayment(Transaction $transaction, BasePaymentForm $form, bool $capture): RequestResponseInterface
     {
         try {
+           
             // get order and payment data
             $order = $transaction->getOrder();
+            $currentUser = Craft::$app->getUser()->getIdentity();
             
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
-                'token' => $this->cardTokenise,
-                'ip' => $this->_getOrderIp($order),
+                'token' => $form->cardToken,
+                'ip' => $this->_getOrderIp(),
                 'amount' => $this->_convertAmount($transaction->paymentAmount),
                 'currency' => $this->defaultCurrency, //$transaction->paymentCurrency,
             ];
-
             if ($order->id) {
-                $paymentData['orderId'] = (string) $order->id.""; // --> can cause INVALID_ORDER_ID
+                $paymentData['orderId'] = (string) $order->id.''; // --> can cause INVALID_ORDER_ID
             }
-
-            if($order->customerId && 0){
-                $paymentData['customerCode'] = (string) $order->customerId.""; // --> can cause INVALID_ORDER_ID
+            // only add customerCode if the order has a payment source and the user is logged in
+            if($currentUser instanceof User && $order->paymentSourceId !== null){
+                $paymentData['customerCode'] = (string) $order->customerId.''; // --> can cause INVALID_ORDER_ID
             }
+            // add threeDSecure if enabled
             if($this->threeDSecure){
                 $initiatePayment = Craft::$app->getSession()->get('initiatePayment');
                 $paymentData['threeDSecure'] = [
@@ -778,9 +815,9 @@ class Gateway extends BaseGateway
             // Prepare payment data according to SecurePay API documentation
             $createPaymentRequest = new CreatePaymentRequest($this->credential->isLive(),	$this->credential, $paymentData);
             $createPaymentResult = $createPaymentRequest->execute()->toArray();
-
-            if(isset($createPaymentResult['errors']))
+            if(isset($createPaymentResult['errors'])){
                 Craft::error('createPaymentRequest ERROR: '. json_encode($createPaymentResult),__METHOD__);
+            }
             else
                 Craft::info('createPaymentRequest Response: '. json_encode($createPaymentResult),__METHOD__);
             
@@ -809,7 +846,7 @@ class Gateway extends BaseGateway
             }
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
-                'ip' => $this->_getOrderIp($order),
+                'ip' => $this->_getOrderIp(),
                 'amount' => $this->_convertAmount($transaction->paymentAmount),
             ];
 
@@ -842,21 +879,24 @@ class Gateway extends BaseGateway
         try {
             // get order and payment data
             $order = $transaction->getOrder();
+            $currentUser = Craft::$app->getUser()->getIdentity();
 
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
                 'preAuthType' => 'PRE_AUTH', //PRE_AUTH,INITIAL_AUTH
-                'token' => $this->cardTokenise,
-                'ip' => $this->_getOrderIp($order),
+                'token' => $this->cardToken,
+                'ip' => $this->_getOrderIp(),
                 'amount' => $this->_convertAmount($transaction->paymentAmount),
                 'currency' => $this->defaultCurrency, //$transaction->paymentCurrency,
             ];
             if ($order->id) {
                 $paymentData['orderId'] = (string) $order->id.""; // --> can cause INVALID_ORDER_ID
             }
-            if($order->customerId && 0){
+            // only add customerCode if the order has a payment source and the user is logged in
+            if($currentUser instanceof User && $order->paymentSourceId !== null){
                 $paymentData['customerCode'] = (string) $order->customerId.""; // --> can cause INVALID_ORDER_ID
             }
+            // add threeDSecure if enabled
             if($this->threeDSecure){
                 $initiatePayment = Craft::$app->getSession()->get('initiatePayment');
                 $paymentData['threeDSecure'] = [
@@ -883,7 +923,6 @@ class Gateway extends BaseGateway
      * 
      * Authorise a payment using SecurePay API following Commerce patterns
      * @param Transaction $transaction
-     * @param BasePaymentForm $form
      * @return RequestResponseInterface
      * @since 1.2.0
      */
@@ -894,7 +933,7 @@ class Gateway extends BaseGateway
             $order = $transaction->getOrder();
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
-                'ip' => $this->_getOrderIp($order),
+                'ip' => $this->_getOrderIp(),
                 'amount' => $this->_convertAmount($transaction->paymentAmount),
             ];
             // Prepare payment data according to SecurePay API documentation
@@ -926,7 +965,7 @@ class Gateway extends BaseGateway
             $total = $this->order ? $this->order->getTotal() : 0;
             $paymentData = [
                 'merchantCode' => $this->credential->getMerchantCode(),
-                'ip' => $this->_getOrderIp($this->order),
+                'ip' => $this->_getOrderIp(),
                 'amount' => $this->_convertAmount($total),
                 'orderType' => $this->threeDSecure ? 'THREED_SECURE' : 'DYNAMIC_CURRENCY_CONVERSION',
             ];
@@ -958,10 +997,9 @@ class Gateway extends BaseGateway
 
     /**
      * Get customer IP address for Craft CMS
-     * @param Order $order
      * @return string
      */
-    private function _getOrderIp($order): string
+    private function _getOrderIp(): string
     {
         $ip_address = '';
         

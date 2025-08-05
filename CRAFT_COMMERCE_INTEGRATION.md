@@ -53,7 +53,7 @@ public function supportsRefund(): bool { return true; }
 public function supportsPartialRefund(): bool { return true; }
 public function supportsWebhooks(): bool { return true; }
 public function supportsPartialPayments(): bool { return true; }
-public function supportsPaymentSources(): bool { return false; } // Not implemented
+public function supportsPaymentSources(): bool { return true; } // Implemented in v1.4.1
 public function supportsCompleteAuthorize(): bool { return true; }
 public function supportsCompletePurchase(): bool { return true; }
 ```
@@ -384,6 +384,93 @@ private function handleWebhookEvent(array $data): void
 }
 ```
 
+## Payment Sources Integration
+
+### 1. Payment Source Management (Added in v1.4.1)
+
+The gateway implements comprehensive payment source management following Commerce patterns:
+
+```php
+public function createPaymentSource(BasePaymentForm $sourceData, int $customerId): PaymentSource
+{
+    $request = Craft::$app->getRequest();
+    $description = $request->getBodyParam('description');
+    $description = !empty($description) ? $description : $this->cardScheme .' card '. $this->cardBin .'••••'. $this->cardLast4;
+    
+    $cardInfo = [
+        'cardToken' => $this->cardToken,
+        'cardExpiryMonth' => $this->cardExpiryMonth,
+        'cardExpiryYear' => $this->cardExpiryYear,
+        'cardBin' => $this->cardBin,
+        'cardLast4' => $this->cardLast4,
+        'cardScheme' => $this->cardScheme,
+        'cardCreatedAt' => $this->cardCreatedAt,
+    ];
+    
+    try {   
+        $createPaymentInstrumentRequest = new CreatePaymentInstrumentRequest(
+            $this->credential->isLive(), 
+            $this->credential, 
+            $customerId, 
+            $this->cardToken, 
+            $this->_getOrderIp()
+        );
+        $createPaymentInstrumentResult = $createPaymentInstrumentRequest->execute()->toArray();
+        
+        if(isset($createPaymentInstrumentResult['errors'])){
+            throw new \Exception('Could not create payment source: ' . $createPaymentInstrumentResult['errors'][0]['detail']);
+        }
+        
+        $paymentSource = new PaymentSource();
+        $paymentSource->customerId = $customerId;
+        $paymentSource->gatewayId = $this->id;
+        $paymentSource->token = $this->cardToken;
+        $paymentSource->response = json_encode($cardInfo);
+        $paymentSource->description = $description;
+        
+        return $paymentSource;
+    } catch (\Exception $e) {
+        throw new \Exception('Could not create payment source: ' . $e->getMessage());
+    }   
+}
+```
+
+### 2. Payment Source Deletion
+
+```php
+public function deletePaymentSource($token): bool
+{
+    $customerId = Craft::$app->user->getIdentity()->id;
+    
+    try {   
+        $deletePaymentInstrumentRequest = new DeletePaymentInstrumentRequest(
+            $this->credential->isLive(), 
+            $this->credential, 
+            $customerId, 
+            $token, 
+            $this->_getOrderIp()
+        );
+        $deletePaymentInstrumentResult = $deletePaymentInstrumentRequest->execute()->toArray();
+        
+        if(isset($deletePaymentInstrumentResult['errors'])){
+            return false;
+        }
+        
+        return true;
+    } catch (\Exception $e) {
+        return false;            
+    }           
+}
+```
+
+### 3. 3D Secure Support for Stored Payment Methods
+
+The payment sources implementation includes full 3D Secure 2.0 support:
+- Stored payment methods can trigger 3D Secure authentication when used
+- Authentication flow is identical to new card payments
+- Enhanced security for returning customers using stored cards
+- Customer code is automatically included when using stored payment methods
+
 ## Payment Processing Implementation
 
 ### 1. Core Payment Creation
@@ -580,15 +667,15 @@ if (result.error) {
 - [x] Implements refund operations
 - [x] Implements authorise/capture operations
 - [x] Implements 3D Secure 2.0 authentication
-- [ ] Implements payment sources (planned)
+- [x] Implements payment sources (added in v1.4.1)
 
 ## Current Limitations
 
-1. **Payment Sources**: Not yet implemented (stored payment methods)
+*No significant limitations remain. All major Commerce features are now implemented.*
 
 ## Future Enhancements
 
-1. **Payment Sources**: Support for storing payment methods
-2. **Fraud Detection**: Integration with SecurePay's fraud detection features
+1. **Fraud Detection**: Integration with SecurePay's fraud detection features
+2. **Enhanced Payment Sources**: Additional payment source management features
 
 This integration follows all the patterns described in the [official Craft Commerce payment gateway documentation](https://craftcms.com/docs/commerce/5.x/extend/payment-gateway-types.html) and provides a solid foundation for SecurePay payment processing with enhanced security through 3D Secure 2.0. 

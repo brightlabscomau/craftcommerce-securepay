@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2025-08-05
+
+### Added
+- **Stored Payment Methods**: Full support for creating, managing, and using stored payment methods (payment sources)
+- **3D Secure for Stored Cards**: Implemented 3D Secure authentication checks for stored payment method transactions
+- **Payment Source Management**: Complete integration with Craft Commerce payment source system for saved cards
+
+### Changed
+- **Asset Organization**: Moved all CSS and JavaScript files to dedicated `/assets` directory for better organization
+- **Checkout Experience**: Enhanced checkout flow to support both new card payments and stored payment method selection
+- **Error Reporting**: Improved error messages and debugging capabilities for better troubleshooting
+
+### Technical Improvements
+- Enhanced payment source creation and deletion workflows
+- Improved asset bundle handling and performance optimization
+- Better integration with Craft Commerce payment source management
+- Streamlined asset loading and organization structure
+
 ## [1.3.2] - 2025-07-14
 
 ### Fixed
