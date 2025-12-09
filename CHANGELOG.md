@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Gateway Availability**: Gateway automatically hidden from frontend when credentials are invalid
 - **JavaScript SDK**: Payment form only loads when credentials are valid in Live mode
-- **Composer Repository**: Updated from GitHub to Bitbucket repository for plugin distribution
+- **Composer Repository**: Updated from GitHub repository for plugin distribution
 
 ### Security
 - Gateway properly hidden from frontend when credentials are invalid in Live mode

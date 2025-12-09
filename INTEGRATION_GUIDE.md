@@ -228,7 +228,7 @@ Craft::info('3D Secure authentication completed successfully', __METHOD__);
 - [3D Secure 2.0 Documentation](https://securepay-docs.readme.io/docs/getting-started-with-securepay-api?javascript#securepay-api-3d-secure-2)
 
 ### Support Channels
-- For issues with the plugin itself, please open an issue on the [Bitbucket repository](https://bitbucket.org/bright-labs/craftcommerce-securepay/issues).
+- For issues with the plugin itself, please open an issue on the [Github repository](https://github.com/brightlabscomau/craftcommerce-securepay/issues).
 - For issues with your SecurePay account or the API service, contact SecurePay support.
 
 ### Troubleshooting

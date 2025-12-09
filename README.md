@@ -39,14 +39,14 @@ This plugin provides a SecurePay payment gateway integration for Craft Commerce,
 ## 🔧 Installation
 
 ### 1. Configure Composer Repository
-Before installing the plugin, you need to add the Bitbucket repository to your `composer.json` file. Add the following to your `composer.json`:
+Before installing the plugin, you need to add the Github repository to your `composer.json` file. Add the following to your `composer.json`:
 
 ```json
 {
   "repositories": [
     {
       "type": "vcs",
-      "url": "https://bitbucket.org/bright-labs/craftcommerce-securepay"
+      "url": "https://github.com/brightlabscomau/craftcommerce-securepay"
     }
   ]
 }
@@ -201,7 +201,7 @@ The plugin provides logging for key events and errors, which can be found in `st
 
 ## 🆘 Support
 
-For issues with the plugin itself, please open an issue on the [Bitbucket repository](https://bitbucket.org/bright-labs/craftcommerce-securepay/issues). For problems related to your SecurePay account, please contact SecurePay support directly.
+For issues with the plugin itself, please open an issue on the [Github repository](https://github.com/brightlabscomau/craftcommerce-securepay/issues). For problems related to your SecurePay account, please contact SecurePay support directly.
 
 ## ⚖️ License
 

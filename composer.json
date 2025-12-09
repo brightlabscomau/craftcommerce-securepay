@@ -14,13 +14,13 @@
         "securepay"
     ],
     "support": {
-        "docs": "https://bitbucket.org/bright-labs/craftcommerce-securepay/src/master/README.md",
-        "issues": "https://bitbucket.org/bright-labs/craftcommerce-securepay/issues"
+        "docs": "https://github.com/brightlabscomau/craftcommerce-securepay/blob/master/README.md",
+        "issues": "https://github.com/brightlabscomau/craftcommerce-securepay/issues"
     },
-    "license": "MIT",
+    "license": "proprietary",
     "authors": [
         {
-            "name": "Brightlabs",
+            "name": "BRIGHTLABS",
             "homepage": "https://brightlabs.com.au/"
         }
     ],
@@ -39,10 +39,10 @@
     "extra": {
         "name": "SecurePay for Craft Commerce",
         "handle": "securepay",
-        "developer": "Brightlabs",
+        "developer": "BRIGHTLABS",
         "developerUrl": "https://brightlabs.com.au/",
-        "documentationUrl": "https://bitbucket.org/bright-labs/craftcommerce-securepay/src/master/README.md",
-        "changelogUrl": "https://bitbucket.org/bright-labs/craftcommerce-securepay/src/master/CHANGELOG.md",
+        "documentationUrl": "https://github.com/brightlabscomau/craftcommerce-securepay/blob/master/README.md",
+        "changelogUrl": "https://github.com/brightlabscomau/craftcommerce-securepay/blob/master/CHANGELOG.md",
         "class": "brightlabs\\securepay\\Plugin"
     }
 } 
