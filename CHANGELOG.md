@@ -1,11 +1,6 @@
-# Changelog
+# SecurePay for Craft Commerce Changelog
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [1.4.1] - 2025-08-05
+## 1.4.1 - 2025-08-05
 
 ### Added
 - **Stored Payment Methods**: Full support for creating, managing, and using stored payment methods (payment sources)
@@ -23,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Better integration with Craft Commerce payment source management
 - Streamlined asset loading and organization structure
 
-## [1.3.2] - 2025-07-14
+## 1.3.2 - 2025-07-14
 
 ### Fixed
 - **JavaScript Syntax Error**: Fixed attribute selector escaping in payment form template
@@ -38,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced error handling without unnecessary try-catch blocks
 - More consistent CSS class naming convention
 
-## [1.3.1] - 2025-06-30
+## 1.3.1 - 2025-06-30
 
 ### Added
 - **Enhanced Credential Validation**: Real-time credential validation with status tracking
@@ -54,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gateway properly hidden from frontend when credentials are invalid in Live mode
 - Enhanced credential validation before API operations
 
-## [1.3.0] - 2025-06-25
+## 1.3.0 - 2025-06-25
 
 ### Added
 - **3D Secure 2.0 Integration**: Full implementation of 3D Secure 2.0 authentication for enhanced security
@@ -72,12 +67,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced security compliance with latest 3D Secure 2.0 standards
 - Better integration with SecurePay's 3D Secure services
 
-## [1.2.1] - 2025-06-23
+## 1.2.1 - 2025-06-23
 
 ### Changed
 - Converted all American spellings to Australian spellings throughout the plugin (documentation, user-facing strings, and code comments/labels).
 
-## [1.2.0] - 2025-06-23
+## 1.2.0 - 2025-06-23
 
 ### Added
 - Authorisation and capture workflows for SecurePay gateway
@@ -93,14 +88,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved code readability and maintainability through consistent naming patterns
 - Enhanced payment flow support for complex transaction scenarios
 
-## [1.1.0] - 2025-06-23
+## 1.1.0 - 2025-06-23
 
 ### Added
 - Full and partial refunds are supported only for AUD transactions
 - For DCC transactions, a refund is not available via the plugin.
 - Only full refunds are supported and available via the SecurePay Merchant Portal for DCC transactions.
 
-## [1.0.0] - 2025-06-20
+## 1.0.0 - 2025-06-20
 
 ### Added
 - Initial release of SecurePay for Craft Commerce
