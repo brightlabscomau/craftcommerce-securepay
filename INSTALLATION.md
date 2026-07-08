@@ -4,8 +4,8 @@
 
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
-**Plugin Package**: `brightlabs/craft-securepay`  
-**Version**: 1.4.1
+**Plugin Package**: `brightlabscomau/craftcommerce-securepay`  
+**Version**: 1.4.2
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps
@@ -27,7 +27,7 @@ Before installing the plugin, you need to add the Github repository to your `com
 ### 2. Install the Plugin via Composer
 From your project's root directory, run the following command:
 ```bash
-composer require brightlabs/craft-securepay
+composer require brightlabscomau/craftcommerce-securepay
 ```
 
 ### 3. Install the Plugin in Craft

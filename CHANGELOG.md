@@ -1,5 +1,10 @@
 # SecurePay for Craft Commerce Changelog
 
+## 1.4.2 - 2026-07-08
+
+### Changed
+- Expanded Craft CMS and Craft Commerce compatibility to support the full 5.x line (including 5.9.x), by raising the version constraints to `>=5.0.0 <6.0.0`.
+
 ## 1.4.1 - 2025-08-05
 
 ### Added

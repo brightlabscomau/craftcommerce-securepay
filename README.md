@@ -2,7 +2,7 @@
 
 This plugin provides a SecurePay payment gateway integration for Craft Commerce, implementing the [official SecurePay API v2](https://securepay-docs.readme.io/docs/getting-started-with-securepay-api) using the recommended JavaScript SDK for enhanced security.
 
-**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.4.1 | **Package**: `brightlabs/craft-securepay`
+**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.4.2 | **Package**: `brightlabscomau/craftcommerce-securepay`
 
 ## 🚀 Features
 
@@ -55,7 +55,7 @@ Before installing the plugin, you need to add the Github repository to your `com
 ### 2. Install the Plugin
 From your project's root directory, run the following commands:
 ```bash
-composer require brightlabs/craft-securepay
+composer require brightlabscomau/craftcommerce-securepay
 php craft plugin/install securepay
 ```
 

@@ -2,14 +2,14 @@
 
 This guide helps resolve common issues with the SecurePay payment gateway integration for Craft Commerce.
 
-**Plugin**: `brightlabs/craft-securepay` v1.4.1  
+**Plugin**: `brightlabscomau/craftcommerce-securepay` v1.4.2  
 **Support**: [Github Issues](https://github.com/brightlabscomau/craftcommerce-securepay/issues) | Craft Discord/Slack  
 **SecurePay Support**: For issues with your SecurePay account, please contact SecurePay directly.
 
 ## Quick Checklist
 
 ### ✅ **1. Plugin Installation**
-- [ ] Plugin is installed via `composer require brightlabs/craft-securepay`.
+- [ ] Plugin is installed via `composer require brightlabscomau/craftcommerce-securepay`.
 - [ ] Plugin is enabled in **Settings → Plugins**.
 - [ ] No installation errors in `storage/logs/`.
 
@@ -193,7 +193,7 @@ CRAFT_DEV_MODE=true
 
 For developers, you can temporarily modify the gateway class to log more details.
 
-In `vendor/brightlabs/craft-securepay/src/gateways/Gateway.php`, you can add logging to the `availableForUseWithOrder` method:
+In `vendor/brightlabscomau/craftcommerce-securepay/src/gateways/Gateway.php`, you can add logging to the `availableForUseWithOrder` method:
 
 ```php
 // src/gateways/Gateway.php
