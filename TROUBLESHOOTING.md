@@ -2,7 +2,7 @@
 
 This guide helps resolve common issues with the SecurePay payment gateway integration for Craft Commerce.
 
-**Plugin**: `brightlabscomau/craftcommerce-securepay` v1.4.2  
+**Plugin**: `brightlabscomau/craftcommerce-securepay` v1.4.3  
 **Support**: [Github Issues](https://github.com/brightlabscomau/craftcommerce-securepay/issues) | Craft Discord/Slack  
 **SecurePay Support**: For issues with your SecurePay account, please contact SecurePay directly.
 
@@ -96,9 +96,10 @@ The plugin caches the authentication token for 24 hours. If you update your Clie
 
 **Solution:**
 The plugin automatically uses pre-configured sandbox credentials when Sandbox Mode is enabled:
-- **Merchant Code**: `5AR0055`
-- **Client ID**: `0oaxb9i8P9vQdXTsn3l5`
-- **Client Secret**: `0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp`
+- **Merchant Code**: `ABC00`
+- **Client ID**: `QpWAQJM4xiej6hLr4i8Z2hiS1JUgIFov`
+- **Client Secret**: `0IPyr8w_zWQs3rRouOkldNPo3eVsHbuGiXiuzK_r2gjGgSIvVqamfHpRhXSHSFSO`
+- **OAuth URL**: `https://auth.sandbox.spa.pmnts.io/oauth/token`
 
 If you're still having issues:
 1. Ensure Sandbox Mode is enabled in your gateway settings.

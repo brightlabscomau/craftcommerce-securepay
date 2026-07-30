@@ -2,7 +2,7 @@
 
 This plugin provides a SecurePay payment gateway integration for Craft Commerce, implementing the [official SecurePay API v2](https://securepay-docs.readme.io/docs/getting-started-with-securepay-api) using the recommended JavaScript SDK for enhanced security.
 
-**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.4.2 | **Package**: `brightlabscomau/craftcommerce-securepay`
+**Built by**: [Brightlabs](https://brightlabs.com.au/) | **Version**: 1.4.3 | **Package**: `brightlabscomau/craftcommerce-securepay`
 
 ## 🚀 Features
 

@@ -5,7 +5,7 @@
 This guide will help you install and configure the SecurePay payment gateway plugin for Craft Commerce.
 
 **Plugin Package**: `brightlabscomau/craftcommerce-securepay`  
-**Version**: 1.4.2
+**Version**: 1.4.3
 **Developer**: [Brightlabs](https://brightlabs.com.au/)
 
 ## Installation Steps
@@ -57,9 +57,10 @@ The following settings are **required** for the gateway to function:
 
 #### Sandbox Mode
 When **Sandbox Mode** is enabled, the plugin automatically uses pre-configured test credentials:
-- **Merchant Code**: `5AR0055`
-- **Client ID**: `0oaxb9i8P9vQdXTsn3l5`
-- **Client Secret**: `0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp`
+- **Merchant Code**: `ABC00`
+- **Client ID**: `QpWAQJM4xiej6hLr4i8Z2hiS1JUgIFov`
+- **Client Secret**: `0IPyr8w_zWQs3rRouOkldNPo3eVsHbuGiXiuzK_r2gjGgSIvVqamfHpRhXSHSFSO`
+- **OAuth URL**: `https://auth.sandbox.spa.pmnts.io/oauth/token`
 
 This makes testing much easier as you don't need to manually enter test credentials.
 
@@ -90,7 +91,7 @@ If you have enabled 3D Secure 2.0:
 
 1.  Obtain your live API credentials from your SecurePay merchant account.
 2.  Update your gateway settings in Craft Commerce with the live credentials.
-3.  Disable **Sandbox Mode**.
+3.  Disable **Sandbox Mode**. The plugin will authenticate against `https://auth.spa.pmnts.io/oauth/token`.
 4.  Ensure your checkout page is served over HTTPS.
 5.  Perform a small live transaction to confirm everything is working correctly.
 

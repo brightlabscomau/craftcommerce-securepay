@@ -525,9 +525,9 @@ public function __construct($config = [])
 {
     parent::__construct($config);
     if($this->sandboxMode){
-        $this->merchantCode = '5AR0055';
-        $this->clientId = '0oaxb9i8P9vQdXTsn3l5';
-        $this->clientSecret = '0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp';
+        $this->merchantCode = 'ABC00';
+        $this->clientId = 'QpWAQJM4xiej6hLr4i8Z2hiS1JUgIFov';
+        $this->clientSecret = '0IPyr8w_zWQs3rRouOkldNPo3eVsHbuGiXiuzK_r2gjGgSIvVqamfHpRhXSHSFSO';
     }
     // get credential and SecurePay Authentication
     $this->getCredential();
@@ -539,7 +539,7 @@ public function getCredential()
         $cache = Craft::$app->getCache();
         $cache_key = "securepay_token2_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCode . $this->clientId . $this->clientSecret);
         $token = $cache->getOrSet($cache_key, function() {
-            $request = new ClientCredentialsRequest(!$this->sandboxMode, $this->clientId, $this->clientSecret);
+            $request = new SecurePayClientCredentialsRequest(!$this->sandboxMode, $this->clientId, $this->clientSecret);
             $response = $request->execute();
             return $response->getAccessToken();
         }, 86400); // 1 day cache
