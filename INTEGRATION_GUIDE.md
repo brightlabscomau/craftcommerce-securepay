@@ -103,7 +103,7 @@ The plugin uses the OAuth 2.0 Client Credentials flow and automatically caches t
 
 ```php
 // Authentication is handled automatically by the plugin
-POST https://welcome.api2.sandbox.auspost.com.au/oauth/token
+POST https://auth.sandbox.spa.pmnts.io/oauth/token
 Authorisation: Basic base64(clientId:clientSecret)
 Content-Type: application/x-www-form-urlencoded
 
@@ -157,8 +157,8 @@ Enable 3D Secure 2.0 in your gateway settings:
 
 ### Test Environment
 - **Sandbox URL**: `https://payments-stest.npe.auspost.zone`
-- **OAuth URL**: `https://welcome.api2.sandbox.auspost.com.au/oauth/token`
-- **Pre-configured Credentials**: Automatically used when Sandbox Mode is enabled
+- **OAuth URL**: `https://auth.sandbox.spa.pmnts.io/oauth/token`
+- **Pre-configured Credentials**: Automatically used when Sandbox Mode is enabled (`ABC00` / spa.pmnts.io test client)
 
 ### Test Cards
 
@@ -198,7 +198,7 @@ When 3D Secure 2.0 is enabled:
 ### Production URLs
 The plugin automatically switches to these URLs when "Sandbox Mode" is disabled:
 - **API Base URL**: `https://payments.auspost.net.au`
-- **OAuth URL**: `https://welcome.api2.auspost.com.au/oauth/token`
+- **OAuth URL**: `https://auth.spa.pmnts.io/oauth/token`
 
 ## 9. Monitoring and Logging
 

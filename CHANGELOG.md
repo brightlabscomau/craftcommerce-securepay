@@ -1,5 +1,11 @@
 # SecurePay for Craft Commerce Changelog
 
+## 1.4.3 - 2026-07-30
+
+### Changed
+- **OAuth Endpoints**: Switched authentication to SecurePay's current hosts — sandbox `https://auth.sandbox.spa.pmnts.io/oauth/token`, live `https://auth.spa.pmnts.io/oauth/token`
+- **Sandbox Credentials**: Updated pre-configured test merchant code, client ID, and client secret for the spa.pmnts.io sandbox
+
 ## 1.4.2 - 2026-07-08
 
 ### Changed

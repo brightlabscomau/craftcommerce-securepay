@@ -18,7 +18,7 @@ use craft\web\View;
 use yii\base\Exception;
 use SecurePayApi\Endpoint;
 use SecurePayApi\Model\Credential;
-use SecurePayApi\Request\ClientCredentialsRequest;
+use brightlabs\securepay\requests\SecurePayClientCredentialsRequest;
 use SecurePayApi\Request\CardPayment\CreatePaymentRequest;
 use SecurePayApi\Request\CardPayment\RefundPaymentRequest;
 use SecurePayApi\Request\CardPayment\CreatePreAuthRequest;
@@ -193,9 +193,9 @@ class Gateway extends BaseGateway
     {
         parent::__construct($config);
         if($this->sandboxMode){
-            $this->clientIdFinal = '0oaxb9i8P9vQdXTsn3l5';
-            $this->clientSecretFinal = '0aBsGU3x1bc-UIF_vDBA2JzjpCPHjoCP7oI6jisp';
-            $this->merchantCodeFinal = '5AR0055';
+            $this->clientIdFinal = 'QpWAQJM4xiej6hLr4i8Z2hiS1JUgIFov';
+            $this->clientSecretFinal = '0IPyr8w_zWQs3rRouOkldNPo3eVsHbuGiXiuzK_r2gjGgSIvVqamfHpRhXSHSFSO';
+            $this->merchantCodeFinal = 'ABC00';
         }
         else{
             $this->clientIdFinal = $this->clientId;
@@ -754,7 +754,7 @@ class Gateway extends BaseGateway
             $cache_key = "securepay_token_" . (!$this->sandboxMode ? 'live' : 'test'). '_' . md5($this->merchantCodeFinal . $this->clientIdFinal . $this->clientSecretFinal);
             $token = $cache->getOrSet($cache_key, function()  {
                 try {
-					$request = new ClientCredentialsRequest(!$this->sandboxMode, $this->clientIdFinal, $this->clientSecretFinal);
+					$request = new SecurePayClientCredentialsRequest(!$this->sandboxMode, $this->clientIdFinal, $this->clientSecretFinal);
 					$response = $request->execute();
 
 					if (method_exists($response, 'getFirstError') && $response->getFirstError()) {
